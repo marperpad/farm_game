@@ -16,7 +16,11 @@
       <h1 class="game-title">Hundir la Granja</h1>
     </div>
     <div class="game-header__right">
-      <div class="turn-indicator">Turno de: <strong id="turnPlayer">–</strong></div>
+      <div class="turn-indicator">
+        <img id="turnAvatar" class="turn-avatar" src="/static/Granjero.png" alt="">
+        Turno de: <strong id="turnPlayer">–</strong>
+        <span id="turnTimer" class="turn-timer"></span>
+      </div>
       <button id="exitGameBtn" class="btn btn--ghost game-exit">Salir</button>
     </div>
   </header>
@@ -72,24 +76,29 @@
 
       <div class="modal__body intro-story">
         <p>
-          <strong>Hace muchos ciclos…</strong><br>
-          En la Gran Llanura, las granjas vivían en equilibrio.
-          Cada familia cuidaba su tierra y compartía la cosecha bajo el mismo sol.
+          <strong>La Gran Llanura, tiempo atrás…</strong><br>
+          Cinco familias de granjeros compartían la tierra más fértil del valle.
+          Cada una levantó graneros, corrales y huertos bajo un acuerdo de paz
+          que duró generaciones.
         </p>
 
         <p>
-          <strong>Pero una sequía inesperada lo cambió todo.</strong><br>
-          El agua escaseó, los caminos se cerraron y las reservas comenzaron a agotarse.
+          <strong>Hasta que el río se secó.</strong><br>
+          Sin agua, las cosechas se perdieron. Los caminos se cerraron.
+          Y lo que antes se compartía, ahora se disputa.
         </p>
 
         <p>
-          <strong>El Consejo de la Llanura ha decidido.</strong><br>
-          Para evitar una guerra total, los granjeros resolverán la disputa
-          con estrategia, astucia y engaño.
+          <strong>El Consejo se reunió por última vez.</strong><br>
+          Para evitar un conflicto abierto, dictó una regla:
+          cada granjero ocultará sus estructuras en la llanura.
+          Quien logre sabotear las granjas rivales sin perder las propias,
+          guiará la reconstrucción cuando el agua vuelva.
         </p>
 
         <p class="intro-highlight">
-          Solo el granjero más astuto guiará el futuro de la llanura.
+          No hay ejércitos ni armas — solo astucia, memoria y el instinto
+          de quien conoce la tierra mejor que nadie.
         </p>
       </div>
 
@@ -124,6 +133,51 @@
 
   <!-- Modal: Fin del juego -->
   <div class="modal" id="gameOverModal" aria-modal="true" role="dialog">
+
+  <!-- Modal: Cómo jugar -->
+  <div class="modal" id="tutorialModal" aria-modal="true" role="dialog">
+    <div class="modal__panel tutorial-panel">
+      <header class="modal__header">
+        <h2 class="modal__title">📜 Reglas de la Contienda</h2>
+      </header>
+
+      <div class="modal__body tutorial-body">
+        <div class="tutorial-section">
+          <h3>🎯 Objetivo</h3>
+          <p>Cada granjero tiene estructuras ocultas en la llanura. Tu misión es <strong>sabotear las granjas rivales</strong> encontrando y destruyendo todas sus estructuras antes de que destruyan las tuyas.</p>
+        </div>
+
+        <div class="tutorial-section">
+          <h3>💥 Cómo atacar</h3>
+          <p>En tu turno, <strong>haz click en cualquier celda del tablero</strong> para lanzar un ataque. El golpe impacta esa posición en los tableros de <strong>todos</strong> tus rivales al mismo tiempo.</p>
+          <ul class="tutorial-legend">
+            <li><span class="legend-icon legend-hit">✕</span> Impacto — diste en una estructura enemiga</li>
+            <li><span class="legend-icon legend-warn">⚠</span> Dañada — la estructura resiste, necesita otro golpe</li>
+            <li><span class="legend-icon legend-miss">•</span> Agua — no había nada en esa posición</li>
+          </ul>
+        </div>
+
+        <div class="tutorial-section">
+          <h3>🛡️ Tus estructuras</h3>
+          <p>Las celdas doradas en tu tablero son <strong>tus propias estructuras</strong>. Tus ataques nunca las dañan, pero los rivales sí pueden encontrarlas. Si todas caen, quedas fuera.</p>
+        </div>
+
+        <div class="tutorial-section">
+          <h3>⚡ Poderes</h3>
+          <p>Cada ronda recibes poderes especiales. Selecciona uno de la lista izquierda y úsalo con el botón o haciendo click en el tablero.</p>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <button class="btn btn--primary" id="tutorialReadyBtn">
+          ¡A la contienda! ⚔️
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: Fin del juego -->
+  <div class="modal" id="gameOverModal" aria-modal="true" role="dialog">
     <div class="modal__panel gameover-panel">
       <header class="modal__header gameover-header">
         <h2 class="modal__title" id="gameOverTitle">🌅 Fin de la contienda</h2>
@@ -137,6 +191,14 @@
     </div>
   </div>
 
+
+  <!-- Reconnect overlay -->
+  <div id="reconnectOverlay" class="reconnect-overlay">
+    <div class="reconnect-message">
+      <span class="reconnect-spinner"></span>
+      Reconectando…
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
   <script src="/static/juego.js"></script>

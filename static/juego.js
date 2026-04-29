@@ -8,6 +8,7 @@
 
   const boardEl        = qs('#gameBoard');
   const turnPlayerEl   = qs('#turnPlayer');
+  const turnAvatarEl   = qs('#turnAvatar');
   const powersListEl   = qs('#powersList');
   const commentsListEl = qs('#commentsList');
   const usePowerBtn    = qs('#usePowerBtn');
@@ -67,34 +68,36 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     revealedCells: [],  // [{x, y, has, decoy}] — celdas reveladas por poder 2x2
     scannedRows: [],    // [{row, hasAny}] — filas escaneadas (permanente)
     scannedCols: [],    // [{col, hasAny}] — columnas escaneadas (permanente)
+    turnDeadline: 0,
+    turnTimerInterval: null,
   };
 
   
-  // Narrativa y advertencias por granjero
+  // Narrativa y advertencias por granjero (conectadas con mecánicas)
   const farmerLore = {
     granjero: {
       title: 'Granjero',
-      text: '🌾 Equilibrio y adaptabilidad. Nunca subestimes su capacidad de responder.'
+      text: '🌾 Estructuras equilibradas en tamaño y cantidad. No tiene trucos especiales, pero tampoco puntos débiles.'
     },
     vaquera: {
       title: 'Vaquera',
-      text: '🎭 No todo impacto es real. Usa trampas para confundir y hacerte dudar.'
+      text: '🎭 Tiene una trampa oculta entre sus estructuras. Si la impactas, el golpe no cuenta — cuidado con los falsos positivos.'
     },
     vaquero: {
       title: 'Vaquero',
-      text: '🤠 Grandes estructuras, visibles y sólidas. Derribarlas tomará estrategia.'
+      text: '🤠 Estructuras grandes y visibles. Fáciles de encontrar, pero cubren mucho terreno.'
     },
     horticultor: {
       title: 'Hortelana',
-      text: '🥕 Muchas piezas pequeñas, ocultas por todo el terreno. Encontrarlas será difícil.'
+      text: '🥕 Muchas piezas pequeñas repartidas por todo el tablero. Encontrarlas todas será un reto de paciencia.'
     },
     apicultor: {
       title: 'Apicultor',
-      text: '🐝 Sus colmenas nunca están quietas. La certeza dura poco contra él.'
+      text: '🐝 Sus colmenas se mueven una celda cada ronda. Donde disparaste antes podría estar vacío ahora.'
     },
     ranchero: {
       title: 'Ranchero',
-      text: '🐄 Pocas estructuras, pero resistentes. Un golpe no será suficiente.'
+      text: '🐄 Pocas estructuras, pero cada una necesita dos impactos para hundirse. Un solo golpe no basta.'
     }
   };
 
@@ -143,13 +146,38 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
 
   function renderBoard(){
     const n = state.boardSize;
-    boardEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
-    boardEl.style.gridTemplateRows    = `repeat(${n}, 1fr)`;
+    // Grid con fila y columna extra para encabezados de coordenadas
+    boardEl.style.gridTemplateColumns = `24px repeat(${n}, 1fr)`;
+    boardEl.style.gridTemplateRows    = `24px repeat(${n}, 1fr)`;
     boardEl.innerHTML = '';
 
-    boardTitleEl.textContent = 'Tu Granja';
+    if (state.currentTurnPlayerId === state.myId) {
+      boardTitleEl.textContent = '¡Tu turno!';
+    } else {
+      boardTitleEl.textContent = 'Tu Granja';
+    }
 
+    // Celda esquina vacía (arriba-izquierda)
+    const corner = document.createElement('div');
+    corner.className = 'board-coord board-coord--corner';
+    boardEl.appendChild(corner);
+
+    // Encabezados de columna (números arriba)
+    for (let x=0; x<n; x++){
+      const hdr = document.createElement('div');
+      hdr.className = 'board-coord board-coord--col';
+      hdr.textContent = x + 1;
+      boardEl.appendChild(hdr);
+    }
+
+    // Filas del tablero
     for (let y=0; y<n; y++){
+      // Encabezado de fila (número a la izquierda)
+      const rowHdr = document.createElement('div');
+      rowHdr.className = 'board-coord board-coord--row';
+      rowHdr.textContent = y + 1;
+      boardEl.appendChild(rowHdr);
+
       for (let x=0; x<n; x++){
         const cell = state.myBoard?.[y]?.[x] || { empty:true };
         const div = document.createElement('button');
@@ -168,12 +196,10 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
           if (hasSC){
             const c = getColor(sc);
             if (hpLeft > 0) {
-              // Primer impacto: color claro (estructura resiste)
               div.style.background = c.miss;
               div.style.borderColor = c.miss;
               div.classList.add('hit-damaged');
             } else {
-              // Hundida: color normal sólido
               div.style.background = c.hit;
               div.style.borderColor = c.hit;
             }
@@ -254,7 +280,44 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     commentsListEl.scrollTop = commentsListEl.scrollHeight;
   }
 
-  function setTurnPlayerName(name){ turnPlayerEl.textContent = name || '—'; }
+  function setTurnInfo(name, avatar){
+    turnPlayerEl.textContent = name || '—';
+    if (turnAvatarEl) turnAvatarEl.src = getAvatarUrl(avatar);
+    // Visual "It's Your Turn" indicator
+    const wrapper = qs('.game-board-wrapper');
+    if (wrapper) {
+      if (state.currentTurnPlayerId === state.myId) {
+        wrapper.classList.add('my-turn');
+        if (boardTitleEl) boardTitleEl.textContent = '¡Tu turno!';
+      } else {
+        wrapper.classList.remove('my-turn');
+        if (boardTitleEl) boardTitleEl.textContent = 'Tu Granja';
+      }
+    }
+  }
+
+  function startTurnTimer(deadline, duration){
+    state.turnDeadline = deadline || (Date.now()/1000 + (duration || 30));
+    if (state.turnTimerInterval) clearInterval(state.turnTimerInterval);
+    updateTurnTimer();
+    state.turnTimerInterval = setInterval(updateTurnTimer, 250);
+  }
+
+  function updateTurnTimer(){
+    const el = qs('#turnTimer');
+    if (!el) return;
+    const remaining = Math.max(0, Math.ceil(state.turnDeadline - Date.now()/1000));
+    el.textContent = remaining + 's';
+    if (remaining <= 5) {
+      el.classList.add('urgent');
+    } else {
+      el.classList.remove('urgent');
+    }
+    if (remaining <= 0) {
+      el.textContent = '⏰ Tiempo agotado';
+      if (state.turnTimerInterval) { clearInterval(state.turnTimerInterval); state.turnTimerInterval = null; }
+    }
+  }
 
   function announce(msg){
     if (liveRegion){ liveRegion.textContent = ''; setTimeout(()=> liveRegion.textContent = msg, 20); }
@@ -297,11 +360,24 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     rivalsModal.classList.add('is-open');
   }
   
-  // Cerrar el modal de rivales y comenzar a jugar
+  // Cerrar el modal de rivales → abrir tutorial
   if (rivalsReadyBtn){
     rivalsReadyBtn.addEventListener('click', () => {
       rivalsModal.classList.remove('is-open');
+      const tutorialModal = document.getElementById('tutorialModal');
+      if (tutorialModal) tutorialModal.classList.add('is-open');
+    });
+  }
+
+  // Cerrar tutorial → comenzar a jugar
+  const tutorialReadyBtn = document.getElementById('tutorialReadyBtn');
+  if (tutorialReadyBtn){
+    tutorialReadyBtn.addEventListener('click', () => {
+      const tutorialModal = document.getElementById('tutorialModal');
+      if (tutorialModal) tutorialModal.classList.remove('is-open');
       document.body.style.overflow = '';
+      const live = document.getElementById('gameLiveRegion');
+      if (live) live.textContent = 'La contienda ha comenzado.';
     });
   }
 
@@ -356,7 +432,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     });
     announce(`Poder activado: ${pwr.label}`);
     state.selectedPower = null;
-    state.myPowers = state.myPowers.filter(p => p.key !== pwr.key);
+    // No quitar el poder aquí — se quita cuando el servidor confirme en poder_resultado
     renderPowers();
   }
 
@@ -369,7 +445,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     });
     announce(`Poder "${pwr.label}" en (${x+1},${y+1})`);
     state.selectedPower = null;
-    state.myPowers = state.myPowers.filter(p => p.key !== pwr.key);
+    // No quitar el poder aquí — se quita cuando el servidor confirme en poder_resultado
     renderPowers();
   }
 
@@ -386,7 +462,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       state.currentTurnPlayerId = 'me';
     }
     renderPlayersList();
-    setTurnPlayerName(myName);
+    setTurnInfo(myName, myAvatarKey);
     renderPowers();
   }
 
@@ -395,6 +471,8 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   /* ---- Socket ---- */
   if (socket){
     socket.on('connect', () => {
+      const overlay = document.getElementById('reconnectOverlay');
+      if (overlay) overlay.classList.remove('is-visible');
       socket.emit('join_game', { room: roomCode, nombre: myName, avatar: myAvatarKey });
     });
 
@@ -410,8 +488,11 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
         if (Array.isArray(data.powers)) state.myPowers = data.powers;
 
         renderPlayersList();
-        setTurnPlayerName(state.players.find(p=>p.id===state.currentTurnPlayerId)?.nombre || '—');
+        const turnP = state.players.find(p=>p.id===state.currentTurnPlayerId);
+        setTurnInfo(turnP?.nombre || '—', turnP?.avatar);
         renderPowers();
+
+        if (data.deadline) startTurnTimer(data.deadline, data.duration);
 
         if (Array.isArray(data.myStructures)){
           state.myBoard = data.myStructures;
@@ -431,41 +512,43 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       const misses = realResults.filter(r => !r.hit);
 
       if (hits.length === 0) {
-        const title ='❌ Fallo';
-        const msg = `[${color.label}] ${who} disparó en (${x+1},${y+1}): El ataque no encontró nada útil.`;
+        const title ='💨 Golpe al vacío';
+        const msg = `${who} lanzó un ataque en (${x+1},${y+1}), pero solo levantó polvo. La llanura sigue intacta.`;
         announce(msg);
         openModal(msg,title);
       } else {
         hits.forEach(r => {
           let msg;
           if (r.decoy) {
-            msg = `[${color.label}] ${who} → ${r.targetName}: ¡Trampa! El golpe parecía certero, pero era solo una ilusión.`;
+            msg = `🎭 ${who} atacó la granja de ${r.targetName} y cayó en una trampa. El golpe fue en vano.`;
           } else if (r.sunk) {
-            msg = `[${color.label}] ${who} → ${r.targetName}: ¡Hundido! ${r.structureName || 'Estructura'} destruida.`;
+            msg = `🔥 ${who} destruyó ${r.structureName || 'una estructura'} de ${r.targetName}. Los cimientos se derrumban.`;
           } else if (r.hpLeft > 0) {
-            msg = `[${color.label}] ${who} → ${r.targetName}: ¡Impacto en ${r.structureName || 'estructura'}! Pero resiste, necesita más golpes.`;
+            msg = `⚠️ ${who} golpeó ${r.structureName || 'una estructura'} de ${r.targetName}, pero resiste. Necesita otro golpe para caer.`;
           } else {
-            msg = `[${color.label}] ${who} → ${r.targetName}: ¡Impacto! ${r.structureName || ''}`;
+            msg = `💥 ${who} impactó en la granja de ${r.targetName}. ${r.structureName || 'Estructura'} alcanzada.`;
           }
           announce(msg);
         });
         if (misses.length > 0) {
-          announce(`[${color.label}] ${who}: El ataque no encontró nada útil en tableros de ${misses.map(r=>r.targetName).join(', ')}`);
+          announce(`💨 El ataque de ${who} no encontró nada en las granjas de ${misses.map(r=>r.targetName).join(', ')}.`);
         }
-        // Modal con resumen de impactos
+        // Modal con resumen
         const summary = hits.map(r => {
-          if (r.decoy) return `${r.targetName}: ¡Trampa! El golpe parecía certero, pero era solo una ilusión.`;
-          if (r.sunk) return `${r.targetName}: ¡Hundido! ${r.structureName || 'Estructura'} destruida.`;
-          if (r.hpLeft > 0) return `${r.targetName}: ¡Impacto en ${r.structureName || 'estructura'}! Pero resiste, necesita más golpes.`;
-          return `${r.targetName}: ¡Impacto! ${r.structureName || ''}`;
+          if (r.decoy) return `🎭 ${r.targetName}: ¡Trampa! Golpe en vano.`;
+          if (r.sunk) return `🔥 ${r.targetName}: ${r.structureName || 'Estructura'} destruida.`;
+          if (r.hpLeft > 0) return `⚠️ ${r.targetName}: ${r.structureName || 'Estructura'} dañada, resiste.`;
+          return `💥 ${r.targetName}: ${r.structureName || 'Estructura'} alcanzada.`;
         }).join('\n');
-        openModal(summary,'Resumen Impactos');
+        openModal(summary,'⚔️ Resultado del ataque');
       }
     });
 
-    socket.on('turno_siguiente', ({ turnoActualId }) => {
+    socket.on('turno_siguiente', ({ turnoActualId, turnoActualAvatar, deadline, duration }) => {
       state.currentTurnPlayerId = turnoActualId;
-      setTurnPlayerName(state.players.find(p=>p.id===turnoActualId)?.nombre || '—');
+      const turnP = state.players.find(p=>p.id===turnoActualId);
+      setTurnInfo(turnP?.nombre || '—', turnoActualAvatar || turnP?.avatar);
+      if (deadline) startTurnTimer(deadline, duration);
 
       // Limpiar celdas reveladas al cambiar de turno
       if (state.revealedCells.length > 0) {
@@ -526,7 +609,14 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     });
 
     socket.on('poder_resultado', (data) => {
-      if (!data.ok){ announce('Error al usar poder.'); return; }
+      if (!data.ok){
+        announce(`No se pudo usar el poder: ${data.error || 'error desconocido'}`);
+        return;
+      }
+
+      // Consumir el poder de la lista local solo cuando el servidor confirma
+      state.myPowers = state.myPowers.filter(p => p.key !== data.power);
+      renderPowers();
 
       if (data.power === 'revelar_2x2'){
         const reveals = data.reveals || [];
@@ -614,6 +704,25 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
         }
       }
       if (data.power === 'senial') announce('Señuelo colocado en tu tablero.');
+    });
+    socket.on('turno_timer', ({ deadline, duration }) => {
+      startTurnTimer(deadline, duration);
+    });
+
+    socket.on('turno_auto_skip', ({ playerName }) => {
+      announce(`⏰ ${playerName} perdió su turno por tiempo`);
+    });
+
+    // --- Auto-Reconnection ---
+    socket.on('disconnect', () => {
+      announce('⚠️ Conexión perdida. Reconectando...');
+      const overlay = document.getElementById('reconnectOverlay');
+      if (overlay) overlay.classList.add('is-visible');
+    });
+
+    socket.on('reconnect', () => {
+      socket.emit('join_game', { room: roomCode, nombre: myName, avatar: myAvatarKey });
+      announce('🔄 Reconectado al servidor.');
     });
   }
 

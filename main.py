@@ -3,6 +3,10 @@ import math
 import random
 import string
 import uuid
+import time
+import threading
+import sqlite3
+import json
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Any
 
@@ -17,6 +21,90 @@ app.secret_key = os.environ.get('SECRET_KEY', 'farm_secret_key_dev_only')
 # Socket.IO: en producción restringir CORS al dominio real
 allowed_origins = os.environ.get('ALLOWED_ORIGINS', '*')
 socketio = SocketIO(app, cors_allowed_origins=allowed_origins)
+
+TURN_DURATION = 30
+
+# ---------- SQLite persistence ----------
+DB_PATH = os.environ.get('DB_PATH', 'game_state.db')
+
+def _get_db():
+    conn = sqlite3.connect(DB_PATH)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
+def init_db():
+    conn = _get_db()
+    conn.execute("CREATE TABLE IF NOT EXISTS rooms (code TEXT PRIMARY KEY, data TEXT)")
+    conn.execute("CREATE TABLE IF NOT EXISTS game_states (code TEXT PRIMARY KEY, data TEXT)")
+    conn.commit()
+    conn.close()
+
+def save_room(code):
+    if code not in rooms:
+        return
+    try:
+        data = json.dumps(rooms[code], default=str)
+        conn = _get_db()
+        conn.execute("INSERT OR REPLACE INTO rooms (code, data) VALUES (?, ?)", (code, data))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[DB] Error saving room {code}: {e}")
+
+def serialize_room_state(state) -> str:
+    return json.dumps({
+        'code': state.code,
+        'players': [{'id':p.id,'sid':p.sid,'nombre':p.nombre,'avatar':p.avatar,'room':p.room,'color_index':p.color_index,'extra_shots':p.extra_shots,'eliminated':p.eliminated} for p in state.players],
+        'boards': state.boards,
+        'board_size': state.board_size,
+        'turn_idx': state.turn_idx,
+        'round_count': state.round_count,
+        'powers': state.powers,
+        'turn_deadline': state.turn_deadline,
+    })
+
+def deserialize_room_state(data_str: str):
+    d = json.loads(data_str)
+    state = RoomState(code=d['code'])
+    state.board_size = d['board_size']
+    state.turn_idx = d['turn_idx']
+    state.round_count = d['round_count']
+    state.boards = d['boards']
+    state.powers = d['powers']
+    state.turn_deadline = d.get('turn_deadline', 0.0)
+    for pd_item in d['players']:
+        state.players.append(Player(**pd_item))
+    return state
+
+def save_game_state(code):
+    if code not in rooms_game:
+        return
+    try:
+        data = serialize_room_state(rooms_game[code])
+        conn = _get_db()
+        conn.execute("INSERT OR REPLACE INTO game_states (code, data) VALUES (?, ?)", (code, data))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[DB] Error saving game state {code}: {e}")
+
+def load_all_state():
+    try:
+        conn = _get_db()
+        for row in conn.execute("SELECT code, data FROM rooms"):
+            try:
+                rooms[row[0]] = json.loads(row[1])
+            except Exception:
+                pass
+        for row in conn.execute("SELECT code, data FROM game_states"):
+            try:
+                rooms_game[row[0]] = deserialize_room_state(row[1])
+            except Exception:
+                pass
+        conn.close()
+        print(f"[DB] Loaded {len(rooms)} rooms, {len(rooms_game)} game states")
+    except Exception as e:
+        print(f"[DB] Error loading state: {e}")
 
 # Estado en memoria
 rooms : Dict[str, dict] = {}  # { codigo: { jugadores: [ {id, nombre, avatar, sid} ], juego_iniciado: bool, ... } }
@@ -43,6 +131,7 @@ class RoomState:
     turn_idx: int = 0
     round_count: int = 0
     powers: Dict[str, List[dict]] = field(default_factory=dict)       # player_id -> [powers]
+    turn_deadline: float = 0.0
 
 rooms_game: Dict[str, RoomState] = {}  # code -> RoomState
 
@@ -343,15 +432,24 @@ def emit_state_to_room(state: RoomState):
             'players': [{'id': q.id, 'nombre': q.nombre, 'avatar': q.avatar, 'colorIndex': q.color_index} for q in state.players],
             'you': {'id': p.id, 'colorIndex': p.color_index},
             'turnoActualId': cp.id if cp else None,
+            'turnoActualAvatar': cp.avatar if cp else 'granjero',
             'boardSize': state.board_size,
             'powers': state.powers.get(p.id, []),
             'myStructures': state.boards.get(p.id),
+            'deadline': state.turn_deadline,
+            'duration': TURN_DURATION,
         }
         emit('estado_juego', payload, room=p.sid)
 
 def emit_turn_change(state: RoomState):
     cp = current_player(state)
-    emit('turno_siguiente', {'turnoActualId': cp.id if cp else None}, to=state.code)
+    cp_avatar = cp.avatar if cp else 'granjero'
+    emit('turno_siguiente', {
+        'turnoActualId': cp.id if cp else None,
+        'turnoActualAvatar': cp_avatar,
+        'deadline': state.turn_deadline,
+        'duration': TURN_DURATION,
+    }, to=state.code)
 
 def move_one_structure_random_step(board: List[List[dict]], key_prefix: str, only_undamaged: bool = False) -> bool:
     """Mueve una estructura (por prefix) 1 celda si es posible; si prefix='' toma cualquiera.
@@ -425,6 +523,27 @@ def move_beehives_for_room(state: RoomState):
         if board:
             move_one_structure_random_step(board, 'colmena')
 
+def start_turn_timer(state: RoomState):
+    state.turn_deadline = time.time() + TURN_DURATION
+    socketio.emit('turno_timer', {'deadline': state.turn_deadline, 'duration': TURN_DURATION}, to=state.code)
+
+def schedule_turn_timeout(code, expected_turn_idx):
+    """Schedule a check after TURN_DURATION seconds."""
+    def _check():
+        socketio.sleep(TURN_DURATION + 1)
+        if code not in rooms_game:
+            return
+        state = rooms_game[code]
+        if state.turn_idx != expected_turn_idx:
+            return  # Turn already changed
+        # Auto-skip
+        cp = current_player(state)
+        if cp and not cp.eliminated:
+            socketio.emit('turno_auto_skip', {'playerName': cp.nombre}, to=code)
+        advance_turn(state)
+        save_game_state(code)
+    socketio.start_background_task(_check)
+
 def advance_turn(state: RoomState):
     # Maneja "doble_tiro"
     cp = current_player(state)
@@ -446,6 +565,8 @@ def advance_turn(state: RoomState):
         for p in state.players:
             emit('tablero_actualizado', {'myStructures': state.boards.get(p.id)}, room=p.sid)
     emit_turn_change(state)
+    start_turn_timer(state)
+    schedule_turn_timeout(state.code, state.turn_idx)
 
 def is_player_defeated(board: List[List[dict]], owner_id: str) -> bool:
     """Revisa si todas las estructuras (no decoy) de un jugador han sido hundidas."""
@@ -535,6 +656,7 @@ def crear_sala():
     session['avatar'] = avatar
     session['player_id'] = jugador['id']
 
+    save_room(codigo)
     return jsonify({'success': True, 'codigo': codigo})
 
 @app.route('/unirse_sala', methods=['POST'])
@@ -573,6 +695,7 @@ def unirse_sala():
         'total': len(room['jugadores'])
     }, room=codigo)
 
+    save_room(codigo)
     return jsonify({'success': True, 'codigo': codigo})
 
 @app.route('/sala')
@@ -628,6 +751,10 @@ def iniciar_juego():
 
     print(f'Juego iniciado en sala {codigo} por {nombre}')
     socketio.emit('juego_iniciado', room=codigo)
+    start_turn_timer(state)
+    schedule_turn_timeout(state.code, state.turn_idx)
+    save_room(codigo)
+    save_game_state(codigo)
     return jsonify({'success': True})
 
 @app.route('/juego')
@@ -703,6 +830,8 @@ def on_join_game(data):
         resolve_all_overlaps(state.boards, state.board_size)
         assign_powers(state)
         rooms_game[code] = state
+        start_turn_timer(state)
+        schedule_turn_timeout(state.code, state.turn_idx)
 
     state = rooms_game[code]
     join_room(code)
@@ -738,6 +867,12 @@ def on_disparo(data):
         return
     state = rooms_game[code]
     shooter = find_player(state, by_sid=request.sid)
+    if not shooter:
+        nombre = session.get('nombre')
+        if nombre:
+            shooter = find_player(state, by_name=nombre)
+            if shooter:
+                shooter.sid = request.sid
     if not shooter:
         return
 
@@ -905,6 +1040,7 @@ def on_disparo(data):
     game_over = check_eliminations_and_winner(state)
     if not game_over:
         advance_turn(state)
+    save_game_state(code)
 
 @socketio.on('usar_poder')
 def on_usar_poder(data):
@@ -918,6 +1054,13 @@ def on_usar_poder(data):
         return
     state = rooms_game[code]
     player = find_player(state, by_sid=request.sid)
+    if not player:
+        # Fallback: buscar por session
+        nombre = session.get('nombre')
+        if nombre:
+            player = find_player(state, by_name=nombre)
+            if player:
+                player.sid = request.sid  # Actualizar SID
     if not player:
         return
 
@@ -1009,32 +1152,20 @@ def on_usar_poder(data):
     # Consume el poder
     state.powers[player.id] = [p for p in my_powers if p['key'] != power]
     emit('poder_resultado', result, room=player.sid)
+    save_game_state(code)
 
 @socketio.on('disconnect')
 def on_disconnect():
     sid = request.sid
-
-    if request.sid in user_sessions:
-        codigo = user_sessions[request.sid]
+    if sid in user_sessions:
+        codigo = user_sessions[sid]
         leave_room(codigo)
-        del user_sessions[request.sid]
-    for code, state in list(rooms_game.items()):
-        p = find_player(state, by_sid=sid)
-        if not p:
-            continue
-        leave_room(code)
-        try:
-            state.players.remove(p)
-        except ValueError:
-            pass
-        state.boards.pop(p.id, None)
-        state.powers.pop(p.id, None)
-        if state.players:
-            state.turn_idx = state.turn_idx % len(state.players)
-            emit_state_to_room(state)
-        else:
-            rooms_game.pop(code, None)
-        break
+        del user_sessions[sid]
+    # Don't remove player from game state - they might reconnect
+    # Just leave the room for socket purposes
+
+init_db()
+load_all_state()
 
 if __name__ == '__main__':
     debug_mode = os.environ.get('FLASK_DEBUG', 'true').lower() == 'true'

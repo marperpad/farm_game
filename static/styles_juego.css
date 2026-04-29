@@ -1563,3 +1563,264 @@ body.game-body{
     background: rgba(52,152,219,.2);
   }
 }
+
+
+/* ==========================================
+   Coordenadas del tablero
+========================================== */
+
+.board-coord{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--muted, #6b6b6b);
+  user-select: none;
+  pointer-events: none;
+}
+
+.board-coord--corner{
+  opacity: 0;
+}
+
+.board-coord--col{
+  border-bottom: 1px solid rgba(0,0,0,.1);
+}
+
+.board-coord--row{
+  border-right: 1px solid rgba(0,0,0,.1);
+}
+
+@media (prefers-color-scheme: dark){
+  .board-coord{ color: #8a9a8e; }
+}
+
+
+/* ==========================================
+   Modal de Tutorial / Cómo jugar
+========================================== */
+
+.tutorial-panel{
+  max-width: 560px;
+  max-height: 90vh;
+  background: linear-gradient(180deg, #fffaf0, #fff3dc);
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tutorial-body{
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 16px 20px;
+  display: grid;
+  gap: 18px;
+}
+
+.tutorial-section h3{
+  font-size: 15px;
+  margin: 0 0 6px;
+  color: #3a2f1d;
+}
+
+.tutorial-section p{
+  font-size: 14px;
+  line-height: 1.6;
+  color: #4a3f2d;
+  margin: 0;
+}
+
+.tutorial-legend{
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: grid;
+  gap: 8px;
+}
+
+.tutorial-legend li{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #4a3f2d;
+}
+
+.legend-icon{
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.legend-hit{
+  background: #e74c3c;
+  color: #fff;
+}
+
+.legend-warn{
+  background: #e74c3c80;
+  color: #fff;
+}
+
+.legend-miss{
+  background: #3498db80;
+  color: #fff;
+}
+
+/* Animación */
+#tutorialModal .modal__panel{
+  animation: fadeSlideIn .35s ease-out both;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark){
+  .tutorial-panel{
+    background: linear-gradient(180deg, #1e2620, #1a211c);
+  }
+  .tutorial-section h3{ color: #e8efe9; }
+  .tutorial-section p{ color: #c8d5ca; }
+  .tutorial-legend li{ color: #c8d5ca; }
+}
+
+
+/* ==========================================
+   Turn Timer
+========================================== */
+
+.turn-timer{
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: rgba(0,0,0,.06);
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.turn-timer.urgent{
+  color: #e74c3c;
+  background: rgba(231,76,60,.12);
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+@keyframes timerPulse{
+  0%, 100%{ opacity: 1; }
+  50%{ opacity: .5; }
+}
+
+@media (prefers-color-scheme: dark){
+  .turn-timer{
+    background: rgba(255,255,255,.1);
+    color: #f5d97a;
+  }
+  .turn-timer.urgent{
+    color: #ff6b6b;
+    background: rgba(231,76,60,.2);
+  }
+}
+
+
+/* ==========================================
+   Visual "It's Your Turn" Indicator
+========================================== */
+
+.game-board-wrapper.my-turn .game-board{
+  box-shadow: 0 0 0 3px #5e8c31, 0 0 20px rgba(94,140,49,.3);
+  animation: turnPulse 2s ease-in-out infinite;
+}
+
+@keyframes turnPulse{
+  0%, 100%{ box-shadow: 0 0 0 3px #5e8c31, 0 0 20px rgba(94,140,49,.3); }
+  50%{ box-shadow: 0 0 0 4px #7fc15b, 0 0 30px rgba(127,193,91,.4); }
+}
+
+@media (prefers-color-scheme: dark){
+  .game-board-wrapper.my-turn .game-board{
+    box-shadow: 0 0 0 3px #7fc15b, 0 0 20px rgba(127,193,91,.3);
+    animation: turnPulseDark 2s ease-in-out infinite;
+  }
+  @keyframes turnPulseDark{
+    0%, 100%{ box-shadow: 0 0 0 3px #7fc15b, 0 0 20px rgba(127,193,91,.3); }
+    50%{ box-shadow: 0 0 0 4px #9ddb7a, 0 0 30px rgba(157,219,122,.4); }
+  }
+}
+
+
+/* ==========================================
+   Avatar in Header
+========================================== */
+
+.turn-avatar{
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 2px solid #ffe8bf;
+  vertical-align: middle;
+  margin-right: 4px;
+}
+
+
+/* ==========================================
+   Reconnect Overlay
+========================================== */
+
+.reconnect-overlay{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+}
+
+.reconnect-overlay.is-visible{
+  display: flex;
+}
+
+.reconnect-message{
+  background: var(--surface);
+  padding: 20px 30px;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-2);
+}
+
+.reconnect-spinner{
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(0,0,0,.1);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+@keyframes spin{
+  to{ transform: rotate(360deg); }
+}
+
+@media (prefers-color-scheme: dark){
+  .reconnect-message{
+    background: #1a211c;
+    color: #e8efe9;
+  }
+  .reconnect-spinner{
+    border-color: rgba(255,255,255,.15);
+    border-top-color: var(--primary);
+  }
+}
