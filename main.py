@@ -751,8 +751,7 @@ def iniciar_juego():
 
     print(f'Juego iniciado en sala {codigo} por {nombre}')
     socketio.emit('juego_iniciado', room=codigo)
-    start_turn_timer(state)
-    schedule_turn_timeout(state.code, state.turn_idx)
+    # No iniciar timer en el primer turno — el jugador necesita tiempo para ver los modales
     save_room(codigo)
     save_game_state(codigo)
     return jsonify({'success': True})
@@ -830,8 +829,7 @@ def on_join_game(data):
         resolve_all_overlaps(state.boards, state.board_size)
         assign_powers(state)
         rooms_game[code] = state
-        start_turn_timer(state)
-        schedule_turn_timeout(state.code, state.turn_idx)
+        # No iniciar timer en creación tardía — primer turno sin límite
 
     state = rooms_game[code]
     join_room(code)

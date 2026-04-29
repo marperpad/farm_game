@@ -329,8 +329,15 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     titleMsgEl.textContent = title || 'Resultado del Impacto';
     structureMsgEl.textContent = msg || '—';
     structureModal.classList.add('is-open');
+    // Auto-cerrar después de 3 segundos para no bloquear el juego
+    if (structureModal._autoCloseTimer) clearTimeout(structureModal._autoCloseTimer);
+    structureModal._autoCloseTimer = setTimeout(closeModal, 3000);
   }
-  function closeModal(){ structureModal && structureModal.classList.remove('is-open'); }
+  function closeModal(){
+    if (!structureModal) return;
+    structureModal.classList.remove('is-open');
+    if (structureModal._autoCloseTimer) { clearTimeout(structureModal._autoCloseTimer); structureModal._autoCloseTimer = null; }
+  }
   on(closeStructBtn, 'click', closeModal);
   on(ackStructBtn, 'click', closeModal);
 
@@ -385,6 +392,8 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   /* ---- Interacciones ---- */
 
   function handleCellClick(x, y){
+    // Cerrar modal de resultado si está abierto para no bloquear
+    closeModal();
     // Poder instantáneo seleccionado: activarlo antes de disparar
     if (state.selectedPower && INSTANT_POWERS.includes(state.selectedPower.key)){
       activateInstantPower(state.selectedPower);

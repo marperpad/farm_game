@@ -1129,8 +1129,18 @@ body.is-host .guest-only{ display:none; }
 
 .intro-panel{
   max-width: 520px;
+  max-height: 90vh;
   background: linear-gradient(180deg, #fffaf0, #fff3dc);
   border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.intro-panel .modal__body{
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
 }
 
 .intro-story{
