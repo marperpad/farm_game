@@ -527,23 +527,6 @@ def start_turn_timer(state: RoomState):
     state.turn_deadline = time.time() + TURN_DURATION
     socketio.emit('turno_timer', {'deadline': state.turn_deadline, 'duration': TURN_DURATION}, to=state.code)
 
-def schedule_turn_timeout(code, expected_turn_idx):
-    """Schedule a check after TURN_DURATION seconds."""
-    def _check():
-        socketio.sleep(TURN_DURATION + 1)
-        if code not in rooms_game:
-            return
-        state = rooms_game[code]
-        if state.turn_idx != expected_turn_idx:
-            return  # Turn already changed
-        # Auto-skip
-        cp = current_player(state)
-        if cp and not cp.eliminated:
-            socketio.emit('turno_auto_skip', {'playerName': cp.nombre}, to=code)
-        advance_turn(state)
-        save_game_state(code)
-    socketio.start_background_task(_check)
-
 def advance_turn(state: RoomState):
     # Maneja "doble_tiro"
     cp = current_player(state)
@@ -566,7 +549,6 @@ def advance_turn(state: RoomState):
             emit('tablero_actualizado', {'myStructures': state.boards.get(p.id)}, room=p.sid)
     emit_turn_change(state)
     start_turn_timer(state)
-    schedule_turn_timeout(state.code, state.turn_idx)
 
 def is_player_defeated(board: List[List[dict]], owner_id: str) -> bool:
     """Revisa si todas las estructuras (no decoy) de un jugador han sido hundidas."""
@@ -1038,6 +1020,26 @@ def on_disparo(data):
     game_over = check_eliminations_and_winner(state)
     if not game_over:
         advance_turn(state)
+    save_game_state(code)
+
+@socketio.on('turno_timeout')
+def on_turno_timeout(data):
+    code = (data.get('room') or '').upper()
+    if code not in rooms_game:
+        return
+    state = rooms_game[code]
+
+    # Validar que el tiempo realmente se agotó (con 2s de margen)
+    if time.time() < state.turn_deadline - 2:
+        return  # Timer aún no ha expirado, ignorar
+
+    cp = current_player(state)
+    if not cp or cp.eliminated:
+        return
+
+    # Anunciar auto-skip a toda la sala
+    emit('turno_auto_skip', {'playerName': cp.nombre}, to=code)
+    advance_turn(state)
     save_game_state(code)
 
 @socketio.on('usar_poder')

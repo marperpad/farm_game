@@ -314,8 +314,10 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       el.classList.remove('urgent');
     }
     if (remaining <= 0) {
-      el.textContent = '⏰ Tiempo agotado';
+      el.textContent = '⏰';
       if (state.turnTimerInterval) { clearInterval(state.turnTimerInterval); state.turnTimerInterval = null; }
+      // Emitir timeout al servidor para que avance el turno
+      if (socket) socket.emit('turno_timeout', { room: roomCode });
     }
   }
 
