@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/styles.css">
+  <title>Document</title>
+</head>
+
+<body>
+  <!-- Hero / Portada -->
+  <section class="hero">
+
+    <div class="hero__card">
+      <div class="hero__left">
+        <div class="brand">
+          <span class="brand__icon" aria-hidden="true"></span> Granja Retro
+        </div>
+
+        <h1 class="title">
+          Retrospectiva <span class="accent">Hundir la Granja</span>
+        </h1>
+
+        <p class="subtitle">
+          Organiza una retrospectiva divertida al estilo “Hundir barcos”, ahora con granjeros,
+          graneros y praderas. ¡Descubre, conversa y mejora!
+        </p>
+
+        <button class="cta" id="openModalBtn" type="button" aria-haspopup="dialog" aria-controls="setupModal">
+          🐔 Iniciar juego
+        </button>
+      </div>
+
+      <aside class="hero__right">
+        <div class="illus" aria-hidden="true"></div>
+        <ul class="bullets">
+          <li class="bullet"><span class="bullet__dot"></span> Crea o únete a una sala</li>
+          <li class="bullet"><span class="bullet__dot"></span> Escoge tu granjero</li>
+          <li class="bullet"><span class="bullet__dot"></span> ¡Lista la retro para jugar!</li>
+        </ul>
+      </aside>
+    </div>
+
+  </section>
+
+  <!-- Modal -->
+  <div class="modal" id="setupModal" role="dialog" aria-modal="true" aria-labelledby="setupTitle"
+    aria-describedby="setupDesc">
+    <div class="modal__panel">
+      <header class="modal__header">
+        <h2 class="modal__title" id="setupTitle">Configurar partida</h2>
+        <button class="modal__close" id="closeModalBtn" aria-label="Cerrar">✕</button>
+      </header>
+
+      <div class="modal__body">
+        <p class="help" id="setupDesc">
+          Selecciona un granjero, escribe tu nombre y el código si vas a unirte a una sala existente.
+          Si dejas el código vacío, crearás una nueva sala.
+          Elije sabiamente tu granjero, cada uno tiene distintas cantidades de casillas para hundir. ¡El granjero más
+          astuto gana!
+        </p>
+
+        <!-- Selección de granjero (5 opciones) -->
+        <div class="farmers" role="radiogroup" aria-label="Selecciona un granjero">
+          <!-- Repite 5 veces con value distinto -->
+          <label class="farmer">
+            <input type="radio" name="farmer" value="granjero">
+            <div class="farmer__avatar">
+              <img src="/static/Granjero.png" alt="Granjero">
+            </div>
+            <div class="farmer__name">Granjero</div>
+          </label>
+          <label class="farmer">
+            <input type="radio" name="farmer" value="apicultor" />
+            <div class="farmer__avatar">
+              <img src="/static/Apicultor.png" alt="Apicultor">
+            </div>
+            <div class="farmer__name">Apicultor</div>
+          </label>
+
+          <label class="farmer">
+            <input type="radio" name="farmer" value="vaquera" />
+            <div class="farmer__avatar">
+              <img src="/static/Vaquera.png" alt="Vaquera">
+            </div>
+            <div class="farmer__name">Vaquera</div>
+          </label>
+
+          <label class="farmer">
+            <input type="radio" name="farmer" value="horticultor" />
+            <div class="farmer__avatar">
+              <img src="/static/Horticultor.png" alt="Horticultor">
+            </div>
+            <div class="farmer__name">Horticultor</div>
+          </label>
+
+          <label class="farmer">
+            <input type="radio" name="farmer" value="ranchero" />
+            <div class="farmer__avatar">
+              <img src="/static/Ranchero.png" alt="Ranchero">
+            </div>
+            <div class="farmer__name">Ranchero</div>
+          </label>
+        </div>
+
+        <!-- Nombre y código de sala -->
+        <div class="form__row">
+          <div class="field">
+            <label class="label" for="playerName">Tu nombre</label>
+            <input class="input" id="playerName" type="text" placeholder="Ej. Mariana" autocomplete="name" />
+          </div>
+          <div class="field">
+            <label class="label" for="roomCode">Código de la sala (opcional)</label>
+            <input class="input" id="roomCode" type="text" placeholder="Déjalo vacío para crear sala"
+              inputmode="latin" />
+          </div>
+        </div>
+      </div>
+
+      <footer class="modal__footer">
+        <span class="help">Tip: Si compartes el código con tu equipo, podrán unirse al instante.</span>
+        <div class="actions">
+          <button class="btn btn--ghost" type="button" onclick="cerrarModal()">Cancelar</button>
+          <button class="btn btn--primary" type="button" onclick="iniciarJuego()">Continuar</button>
+        </div>
+      </footer>
+    </div>
+  </div>
+</body>
+
+<script>
+  const openBtn = document.getElementById('openModalBtn');
+  const modal = document.getElementById('setupModal');
+  const closeBtn = document.getElementById('closeModalBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+
+  function openModal() {
+    modal.classList.add('is-open');
+    // Enfocar primer control útil
+    const firstRadio = modal.querySelector('input[name="farmer"]');
+    firstRadio && firstRadio.focus();
+  }
+  function closeModal() {
+    modal.classList.remove('is-open');
+    openBtn.focus();
+  }
+
+  openBtn.addEventListener('click', openModal);
+  closeBtn.addEventListener('click', closeModal);
+  cancelBtn.addEventListener('click', closeModal);
+
+  // Cerrar con fondo o con ESC
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modal.classList.contains('is-open')) closeModal();
+  });
+
+
+  function cerrarModal() {
+    document.getElementById('setupModal').style.display = 'none';
+  }
+
+  async function iniciarJuego() {
+    const nombre = document.getElementById('playerName').value.trim();
+    const codigoSala = document.getElementById('roomCode').value.trim().toUpperCase();
+    const avatarSeleccionado = document.querySelector('input[name="farmer"]:checked')?.value;
+
+    if (!nombre) {
+      alert('Por favor ingresa tu nombre');
+      return;
+    }
+
+    // Guardar datos en localStorage
+    localStorage.setItem('nombre', nombre);
+    localStorage.setItem('avatar', avatarSeleccionado);
+
+    try {
+      if (codigoSala) {
+        // Unirse a sala existente
+        const response = await fetch('/unirse_sala', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre,
+            avatar: avatarSeleccionado,
+            codigo: codigoSala
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          localStorage.setItem('codigo', data.codigo);
+          window.location.href = `/sala?codigo=${data.codigo}`;
+        } else {
+          alert(data.error);
+        }
+      } else {
+        // Crear nueva sala
+        const response = await fetch('/crear_sala', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            nombre,
+            avatar: avatarSeleccionado
+          })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          localStorage.setItem('codigo', data.codigo);
+          window.location.href = `/sala?codigo=${data.codigo}`;
+        } else {
+          alert('Error al crear la sala');
+        }
+      }
+    } catch (error) {
+      console.error('Error:', error);
+      alert('Error de conexión');
+    }
+  }
+</script>
+
+</html>

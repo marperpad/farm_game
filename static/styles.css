@@ -1,0 +1,842 @@
+/* ================================
+   Variables y Reset
+================================== */
+:root{
+  --bg: #f7f3ea;
+  --bg-contrast: #f0e9d9;
+  --primary: #5e8c31;          /* verde granja */
+  --primary-600: #4e7729;
+  --secondary: #d29922;        /* dorado/heno */
+  --accent: #a83d2f;           /* rojo granero */
+  --text: #2c2c2c;
+  --muted: #6b6b6b;
+
+  --surface: #ffffff;
+  --surface-2: #fffaf0;
+
+  --ring: 3px;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --shadow-1: 0 6px 20px rgba(0,0,0,.08);
+  --shadow-2: 0 8px 30px rgba(0,0,0,.12);
+
+  --modal-backdrop: rgba(0,0,0,.45);
+
+  --grid-max: 1080px;
+  --font-display: "Poppins", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+}
+
+*,
+*::before,
+*::after{ box-sizing: border-box; }
+
+html, body{
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+}
+
+body{
+  margin: 0;
+  font-family: var(--font-body);
+  line-height: 1.4;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Prefiere reducción de movimiento */
+@media (prefers-reduced-motion: reduce){
+  *{ animation: none !important; transition: none !important; }
+}
+
+/* ================================
+   Hero / Portada
+================================== */
+.hero{
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+/* Fondo granja con capas: cielo, colinas, granero, vallas */
+.hero::before{
+  content: "";
+  position: absolute;
+  inset: -10% -5% 0 -5%;
+  background:
+    /* Sol */
+    radial-gradient(circle at 12% 18%, #e9dcb2 0 120px, transparent 130px),
+    /* Nubes */
+    radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.9), rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse at 85% 28%, rgba(255,255,255,.9), rgba(255,255,255,0) 60%),
+    /* Colinas */
+    radial-gradient(1200px 380px at 20% 105%, #8ac46b, transparent 60%),
+    radial-gradient(1200px 420px at 80% 108%, #79b85d, transparent 60%),
+    linear-gradient(#bfe3ff 0%, #e7f3ff 55%, var(--bg-contrast) 100%); 
+  z-index: -2; 
+}
+
+.hero::after{
+  content:"";
+  position:absolute;
+  inset: auto 0 0 0;
+  height: 160px;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.06), rgba(0,0,0,0)),
+    linear-gradient(#daf0d7, #dbeebd);
+  z-index: -1;
+  box-shadow: inset 0 10px 20px rgba(0,0,0,.08);
+}
+
+/* Contenedor central */
+.hero__card{
+  width: min(100%, 980px);
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  border: 1px solid rgba(0,0,0,.06);
+  padding: 28px;
+}
+
+@media (max-width: 900px){
+  .hero__card{
+    grid-template-columns: 1fr;
+    padding: 22px;
+  }
+}
+
+/* Lado izquierdo: título y descripción */
+.hero__left{
+  padding: clamp(8px, 2vw, 14px);
+}
+
+.brand{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--accent);
+  font-weight: 700;
+  letter-spacing: .5px;
+  text-transform: uppercase;
+  font-size: 13px;
+}
+
+
+
+
+
+
+
+
+
+/* Paca de paja cuadrada (bala rectangular) */
+.brand__icon{
+  --size: 18px;                /* ajusta el tamaño del icono */
+  --straw-1: #f7d46a;          /* tonos paja */
+  --straw-2: #e7b84b;
+  --straw-3: #fbe28a;
+  --twine: #b8862a;            /* cuerda/cinta */
+  --shadow: rgba(0,0,0,.18);
+
+  width: var(--size);
+  height: var(--size);
+  display: inline-block;
+  border-radius: 3px;
+  position: relative;
+  box-shadow: 0 1px 0 var(--shadow) inset, 0 1px 2px var(--shadow);
+  background:
+    /* vetas verticales de paja (repetición fina) */
+    repeating-linear-gradient(
+      90deg,
+      var(--straw-1) 0 2px,
+      var(--straw-2) 2px 3px,
+      var(--straw-1) 3px 5px,
+      var(--straw-3) 5px 6px
+    );
+}
+
+/* bandas de cuerda (dos cintas) */
+.brand__icon::before,
+.brand__icon::after{
+  content:"";
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;                 /* grosor de la cuerda */
+  background:
+    linear-gradient(180deg, #d19a3a, var(--twine));
+  box-shadow:
+    0 1px 0 rgba(255,255,255,.35) inset,
+    0 1px 0 rgba(0,0,0,.15);
+}
+.brand__icon::before{ top: 4px; }
+.brand__icon::after { bottom: 4px; }
+
+/* “pelitos” desordenados de paja en bordes */
+.brand__icon{
+  -webkit-mask:
+    /* mordidas irregulares arriba/abajo */
+    radial-gradient(6px 3px at 20% 0%, #000 55%, transparent 56%) top left / 50% 50% repeat-x,
+    radial-gradient(6px 3px at 80% 100%, #000 55%, transparent 56%) bottom left / 50% 50% repeat-x,
+    linear-gradient(#000 0 0); /* relleno */
+  mask:
+    radial-gradient(6px 3px at 20% 0%, #000 55%, transparent 56%) top left / 50% 50% repeat-x,
+    radial-gradient(6px 3px at 80% 100%, #000 55%, transparent 56%) bottom left / 50% 50% repeat-x,
+    linear-gradient(#000 0 0);
+}
+
+/* Opcional: mejor contraste en dark mode */
+@media (prefers-color-scheme: dark){
+  .brand__icon{
+    --straw-1: #f2cf64;
+    --straw-2: #d6a94a;
+    --straw-3: #ffe082;
+    --twine: #a5772b;
+    box-shadow: 0 1px 0 rgba(0,0,0,.35) inset, 0 1px 2px rgba(0,0,0,.4);
+  }
+}
+
+
+
+
+
+
+
+
+
+h1.title{
+  font-family: var(--font-display);
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.1;
+  margin: 10px 0 8px;
+  color: #1d1d1d;
+  letter-spacing: .2px;
+}
+
+h1 .accent{
+  color: var(--primary);
+  text-shadow: 0 2px 0 rgba(0,0,0,.06);
+}
+
+.subtitle{
+  color: var(--muted);
+  font-size: clamp(14px, 1.6vw, 16px);
+  margin: 6px 0 18px;
+}
+
+/* CTA principal */
+.cta{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  color: #fff;
+  font-weight: 700;
+  padding: 14px 18px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(78,119,41,.28), 0 1px 0 rgba(255,255,255,.6) inset;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+
+.cta:hover{ transform: translateY(-2px); box-shadow: 0 10px 22px rgba(78,119,41,.32); }
+.cta:active{ transform: translateY(0); filter: brightness(.96); }
+.cta:focus-visible{ outline: var(--ring) solid #92c95e; outline-offset: 3px; }
+
+/* Pilar derecho: tarjeta decorativa granero y lista breve */
+.hero__right{
+  background: #fff;
+  border: 1px solid rgba(0,0,0,.06);
+  border-radius: var(--radius-sm);
+  padding: 18px;
+  box-shadow: var(--shadow-1);
+  display: grid;
+  gap: 14px;
+}
+
+/* Contenedor de la ilustración */
+.illus{
+  position: relative;
+  height: 190px;
+  border-radius: 12px;
+  overflow: hidden;
+
+  /* Cielo suave con ligero degradado */
+  background:
+    radial-gradient(60% 80% at 20% 20%, rgba(255,255,255,.85), rgba(255,255,255,0) 60%) no-repeat,
+    linear-gradient(180deg, #bfe3ff 0%, #8fd0ff 50%, #e9f6ff 100%);
+  filter: drop-shadow(0 4px 10px rgba(0,0,0,.06));
+}
+
+/* Capas del granero y montañas */
+.illus::before{
+  content:"";
+  position:absolute;
+  inset: 0;
+
+  /* --- Capas dibujadas de atrás hacia adelante --- */
+  background:
+    /* Montañas suaves al fondo */
+    radial-gradient(1200px 300px at 20% 120%, #86b49c 0 60%, transparent 61%),
+    radial-gradient(1000px 260px at 80% 118%, #6aa08a 0 60%, transparent 61%),
+
+}
+
+/* Césped, camino y cerca frontal */
+.illus::after{
+  content:"";
+  position:absolute;
+  left:0; right:0; bottom:0;
+  height: 38%;
+
+  background:
+    /* cerca: listones horizontales */
+    linear-gradient(#7a532e 0 0) 0 12% / 100% 6px no-repeat,
+    linear-gradient(#7a532e 0 0) 0 28% / 100% 6px no-repeat,
+    /* cerca: postes verticales repetidos */
+    repeating-linear-gradient(90deg, #8b6338 0 6px, #8b6338 0 10px, transparent 10px 34px) 0 0 / 100% 50% no-repeat,
+
+    /* camino de tierra al frente del granero */
+    radial-gradient(60% 60% at 50% 100%, rgba(0,0,0,.08), transparent 60%) bottom/100% 100% no-repeat,
+    linear-gradient(180deg, #b07a44  0 40%, #b07a44 40% 60%, #7ecb54 60% 100%);
+  /* sombrita interior superior para separar */
+  box-shadow: inset 0 10px 20px rgba(0,0,0,.08);
+}
+
+
+/* Puntos destacados */
+.bullets{
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 6px;
+  padding: 0;
+  list-style: none;
+}
+.bullet{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #3a3a3a;
+  font-size: 14px;
+}
+.bullet__dot{
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--secondary);
+  box-shadow: 0 0 0 3px rgba(210,153,34,.15);
+}
+
+/* ================================
+   Modal - Selección de granjero
+================================== */
+.modal{
+  position: fixed;
+  inset: 0;
+  display: none;              /* se muestra con .is-open */
+  align-items: center;
+  justify-content: center;
+  background: var(--modal-backdrop);
+  padding: 28px 18px;
+  z-index: 50;
+}
+.modal.is-open{ display: flex; }
+
+.modal__panel{
+  width: min(760px, 100%);
+  background: var(--surface);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.22);
+  border: 1px solid rgba(0,0,0,.08);
+  overflow: hidden;
+  animation: modal-in .18s ease-out both;
+}
+
+@keyframes modal-in{
+  from{ transform: translateY(10px) scale(.98); opacity: 0; }
+  to{ transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal__header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px 18px;
+  background: linear-gradient(180deg, #fff, #fff8ec);
+  border-bottom: 1px solid rgba(0,0,0,.06);
+}
+.modal__title{
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+}
+.modal__close{
+  appearance: none;
+  border: none;
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: #f3f3f3;
+  color: #444;
+  cursor: pointer;
+  transition: background .12s ease, transform .12s ease;
+}
+.modal__close:hover{ background: #e9e9e9; transform: rotate(-8deg); }
+.modal__close:focus-visible{ outline: var(--ring) solid #92c95e; outline-offset: 3px; }
+
+/* Contenido del modal */
+.modal__body{
+  padding: 16px 18px 20px;
+  display: grid;
+  gap: 16px;
+}
+
+.form{
+  display: grid;
+  gap: 16px;
+}
+
+/* Selección de granjero (5 opciones) */
+.farmers{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+@media (max-width: 720px){
+  .farmers{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 420px){
+  .farmers{ grid-template-columns: repeat(2, 1fr); }
+}
+
+.farmer{
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  background: linear-gradient(180deg, #fff, #fffaf4);
+  box-shadow: var(--shadow-1);
+  padding: 10px 8px 12px;
+  cursor: pointer;
+  transition: transform .12s ease, box-shadow .12s ease, border-color .12s ease;
+}
+.farmer:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 10px 20px rgba(0,0,0,.12);
+}
+.farmer:has(input:focus-visible){
+  outline: var(--ring) solid #92c95e; outline-offset: 3px;
+}
+
+.farmer input{
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* Contenedor del avatar: mantiene medidas, borde y sombras */
+.farmer__avatar{
+  width: 90px;
+  height: 90px;
+  margin: 6px auto 8px;
+  border-radius: 12px;
+  border: 6px solid #ffe8bf;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.08);
+  overflow: hidden;           /* recorta la imagen al radio */
+  background: #f6f6f6;        /* color de respaldo si no carga la imagen */
+  display: grid;
+  place-items: center;
+}
+
+/* La imagen ocupa todo el cuadro sin deformarse */
+.farmer__avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;          /* respeta proporción, recorta lo sobrante */
+  object-position: center;    /* centra el encuadre */
+  display: block;
+  image-rendering: auto;      /* si usas pixel-art, cámbialo por 'pixelated' */
+}
+
+/* Accesibilidad al navegar con teclado sobre la tarjeta */
+.farmer:has(input:focus-visible) .farmer__avatar{
+  outline: 3px solid #92c95e;
+  outline-offset: 3px;
+}
+
+/* (opcional) Cuando está seleccionado, realza el borde del avatar */
+.farmer:has(input:checked) .farmer__avatar{
+  border-color: #ffd37a;
+}
+
+.farmer__name{
+  text-align: center;
+  font-weight: 700;
+  font-size: 13px;
+  color: #3a3a3a;
+}
+
+/* Estado seleccionado */
+.farmer:has(input:checked){
+  border-color: var(--secondary);
+  box-shadow: 0 12px 26px rgba(210,153,34,.22);
+  background: linear-gradient(180deg, #fffdf6, #fff6e7);
+}
+.farmer:has(input:checked) .farmer__avatar{
+  border-color: #ffd37a;
+}
+
+/* Inputs de nombre y código de sala */
+.form__row{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+@media (max-width: 600px){
+  .form__row{ grid-template-columns: 1fr; }
+}
+
+.field{
+  display: grid;
+  gap: 6px;
+}
+.label{
+  font-size: 13px;
+  color: #4b4b4b;
+  font-weight: 600;
+}
+.input{
+  appearance: none;
+  width: 100%;
+  border: 1.5px solid #d9d9d9;
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font: inherit;
+  color: var(--text);
+  outline: none;
+  transition: border-color .12s ease, box-shadow .12s ease, background-color .12s ease;
+}
+.input::placeholder{ color: #aaa; }
+.input:hover{ border-color: #cfcfcf; }
+.input:focus{
+  border-color: #a5d06f;
+  box-shadow: 0 0 0 4px rgba(146,201,94,.22);
+}
+
+/* Nota de ayuda */
+.help{
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Footer del modal */
+.modal__footer{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px 18px;
+  gap: 10px;
+}
+
+.btn{
+  appearance: none;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .12s ease, filter .12s ease, box-shadow .12s ease;
+}
+.btn:disabled{
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.btn--ghost{
+  background: #f4f4f4;
+  color: #333;
+}
+.btn--ghost:hover{ filter: brightness(.98); transform: translateY(-1px); }
+
+.btn--primary{
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(78,119,41,.25);
+}
+.btn--primary:hover{ transform: translateY(-1px); }
+.btn--primary:active{ transform: translateY(0); filter: brightness(.98); }
+.btn--primary:focus-visible{ outline: var(--ring) solid #92c95e; outline-offset: 3px; }
+
+/* Etiquetas y errores (si deseas validación) */
+.error{
+  color: #9b2c2c;
+  background: #fde8e8;
+  border: 1px solid #fac7c7;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+/* ================================
+   Utilidades
+================================== */
+.center{ display: grid; place-items: center; }
+.stack-sm > * + *{ margin-top: 6px; }
+.stack-md > * + *{ margin-top: 12px; }
+.stack-lg > * + *{ margin-top: 18px; }
+
+.hidden{ display: none !important; }
+
+/* ================================
+   Dark Mode (opcional)
+================================== */
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg: #0f1311;
+    --bg-contrast: #141a17;
+    --surface: #161c18;
+    --surface-2: #19221c;
+    --text: #e8efe9;
+    --muted: #aeb9b1;
+    --modal-backdrop: rgba(0,0,0,.6);
+    --primary: #7fc15b;
+    --primary-600: #6eb34c;
+    --secondary: #deb254;
+  }
+  .hero__card, .hero__right{ border-color: rgba(255,255,255,.08); }
+  .cta{ box-shadow: 0 8px 18px rgba(111,175,79,.28); }
+  .input{ background: #0f1311; border-color: #2a322c; }
+  .btn--ghost{ background: #242d26; color: #e8efe9; }
+  .modal__header{ background: linear-gradient(180deg, #1b231e, #1a211c); border-bottom-color: rgba(255,255,255,.06); }
+}
+
+/* ================================
+   Lobby / Pantalla de espera
+================================== */
+
+/* Reutiliza tu fondo "hero" para mantener identidad visual */
+.lobby{
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 32px 20px;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+.lobby::before{
+  content: "";
+  position: absolute;
+  inset: -10% -5% 0 -5%;
+  background:
+    radial-gradient(circle at 12% 18%, #e9dcb2 0 120px, transparent 130px),
+    radial-gradient(ellipse at 70% 20%, rgba(255,255,255,.9), rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse at 85% 28%, rgba(255,255,255,.9), rgba(255,255,255,0) 60%),
+    radial-gradient(1200px 380px at 20% 105%, #8ac46b, transparent 60%),
+    radial-gradient(1200px 420px at 80% 108%, #79b85d, transparent 60%),
+    linear-gradient(#bfe3ff 0%, #e7f3ff 55%, var(--bg-contrast) 100%);
+  z-index: -2;
+}
+.lobby::after{
+  content:"";
+  position:absolute;
+  inset: auto 0 0 0;
+  height: 160px;
+  background:
+    linear-gradient(0deg, rgba(0,0,0,.06), rgba(0,0,0,0)),
+    linear-gradient(#daf0d7, #dbeebd);
+  z-index: -1;
+  box-shadow: inset 0 10px 20px rgba(0,0,0,.08);
+}
+
+/* Contenedor principal del lobby */
+.lobby__card{
+  width: min(100%, 980px);
+  background: linear-gradient(180deg, var(--surface), var(--surface-2));
+  border-radius: var(--radius);
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: var(--shadow-2);
+  padding: 22px;
+  display: grid;
+  gap: 14px;
+}
+
+/* Header del lobby: sala, badge de host, acciones */
+.lobby__header{
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: center;
+}
+@media (max-width: 640px){
+  .lobby__header{ grid-template-columns: 1fr; }
+}
+
+.lobby__title{
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(18px, 2.2vw, 22px);
+  color: #1d1d1d;
+}
+.badge{
+  display:inline-flex; align-items:center; gap:6px;
+  font-size: 12px; font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(0,0,0,.06);
+  background: #fff7e6;
+  color: #8a5a10;
+}
+.badge--host{ background: #ecffe7; color: #2c6a1b; border-color: rgba(44,106,27,.18); }
+
+.lobby__actions{
+  display:flex; gap: 10px; align-items:center; justify-content:flex-end;
+}
+.btn--copy{
+  background: #f4f4f4;
+  color: #333;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid rgba(0,0,0,.06);
+}
+.btn--copy:hover{ filter: brightness(.98); transform: translateY(-1px); }
+
+.room-code{
+  display:inline-flex; align-items:center; gap:8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-weight: 800;
+  letter-spacing: 1px;
+  background: #fff;
+  border: 1px dashed rgba(0,0,0,.15);
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+/* Info bar (jugadores, estado) */
+.lobby__info{
+  display:flex; flex-wrap:wrap; gap: 10px 16px; align-items:center; justify-content:space-between;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #ffffffa6;
+  border: 1px solid rgba(0,0,0,.06);
+}
+.lobby__hint{ color: var(--muted); font-size: 13px; }
+
+/* Grid de jugadores */
+.lobby__grid{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+}
+@media (max-width: 1024px){ .lobby__grid{ grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 780px){ .lobby__grid{ grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 560px){ .lobby__grid{ grid-template-columns: repeat(2, 1fr); } }
+
+.player-card{
+  background: linear-gradient(180deg, #fff, #fffaf4);
+  border-radius: 14px;
+  border: 1px solid rgba(0,0,0,.06);
+  box-shadow: var(--shadow-1);
+  padding: 10px 10px 12px;
+  display:grid; gap: 8px; justify-items:center;
+  text-align:center;
+  position: relative;
+}
+
+.player-card__avatar{
+  width: 86px; height: 86px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 4px solid #ffe8bf;
+  box-shadow: inset 0 2px 6px rgba(0,0,0,.06), 0 4px 10px rgba(0,0,0,.06);
+  background: #f6f6f6;
+  display:grid; place-items:center;
+}
+.player-card__avatar img{
+  width:100%; height:100%; object-fit:cover; object-position:center; display:block;
+}
+
+.player-card__name{
+  font-weight: 800; font-size: 13px; color: #2e2e2e;
+}
+.player-card__meta{
+  display:flex; align-items:center; gap: 6px; font-size:12px; color: var(--muted);
+}
+
+/* Estados: listo / esperando */
+.status-dot{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #c9c9c9; box-shadow: 0 0 0 3px rgba(0,0,0,.04);
+}
+.status--ready .status-dot{ background: #47b158; box-shadow: 0 0 0 3px rgba(71,177,88,.18); }
+.status--wait .status-dot{ background: #d29922; box-shadow: 0 0 0 3px rgba(210,153,34,.18); }
+
+/* Placeholder cargando (slots vacíos) */
+.player-card.is-placeholder{
+  background: linear-gradient(90deg, #f5f5f5 25%, #ffffff 50%, #f5f5f5 75%);
+  background-size: 300% 100%;
+  animation: shimmer 1.4s infinite;
+}
+@keyframes shimmer{
+  0%{ background-position: 200% 0; }
+  100%{ background-position: -200% 0; }
+}
+
+/* Pie del lobby: Ready (invitado) / Iniciar (host) */
+.lobby__footer{
+  display:flex; align-items:center; justify-content:space-between; gap: 12px; margin-top: 4px;
+}
+.lobby__left{
+  display:flex; align-items:center; gap: 10px; color: var(--muted); font-size: 13px;
+}
+.lobby__right{
+  display:flex; gap: 10px; align-items:center;
+}
+
+.start-btn{
+  background: linear-gradient(180deg, var(--primary), var(--primary-600));
+  color: #fff; font-weight: 800; border:none; border-radius: 12px;
+  padding: 12px 16px; cursor: pointer;
+  box-shadow: 0 10px 20px rgba(78,119,41,.25);
+}
+.start-btn[disabled]{ opacity: .6; cursor: not-allowed; }
+
+.ready-btn{
+  background: #f4f4f4; color:#333; border-radius: 12px; padding: 12px 16px; font-weight: 800; border:none; cursor:pointer;
+}
+.ready-btn[aria-pressed="true"]{
+  background: #e9f8ea; color: #1d6b2b; border: 1px solid rgba(29,107,43,.2);
+}
+
+/* Mostrar/ocultar según rol (host / invitado)
+   Pon <body class="is-host"> cuando sea anfitrión */
+.host-only{ display:none; }
+.guest-only{ display:flex; }
+body.is-host .host-only{ display:flex; }
+body.is-host .guest-only{ display:none; }
+
+/* Mensajes accesibles en vivo */
+.lobby__live{
+  position: absolute; width:1px; height:1px; overflow:hidden; clip:rect(1px,1px,1px,1px);
+}
+
+/* Ajustes dark mode que heredan tus variables */
+@media (prefers-color-scheme: dark){
+  .lobby__card{ border-color: rgba(255,255,255,.08); }
+  .room-code{ background: #111a14; border-color: rgba(255,255,255,.08); }
+  .btn--copy{ background:#242d26; color:#e8efe9; }
+  .player-card{ background: linear-gradient(180deg, #161c18, #1a211c); border-color: rgba(255,255,255,.06); }
+  .player-card__name{ color: var(--text); }
+  .lobby__info{ background: #172019; border-color: rgba(255,255,255,.06); }
+}

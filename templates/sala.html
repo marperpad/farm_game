@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sala de Espera</title>
+    <link rel="stylesheet" href="/static/styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700;900&display=swap" rel="stylesheet">
+
+</head>
+<!-- BODY: agrega class="is-host" si ES anfitrión; quítala si es invitado -->
+
+<body class="is-host">
+
+    <section class="lobby" aria-labelledby="lobbyTitle">
+        <div class="lobby__card">
+
+            <!-- Encabezado -->
+            <header class="lobby__header">
+                <h1 class="lobby__title" id="lobbyTitle">
+                    <span class="brand__icon" aria-hidden="true"></span>
+                    Sala lista para sembrar 🌱
+                    <span id="roleBadge" class="badge badge--host">Anfitrión</span>
+                </h1>
+
+                <div class="lobby__actions">
+                    <div class="room-code" id="roomCode" aria-label="Código de sala">CÓDIGO: <strong id="roomCodeValue">-</strong>
+                    </div>
+                    <button class="btn--copy" id="copyBtn" type="button">Copiar código</button>
+                </div>
+            </header>
+
+            <!-- Barra info -->
+            <div class="lobby__info" role="status" aria-live="polite">
+                <div class="lobby__hint">
+                    Esperando a que se unan los demás jugadores…
+                </div>
+                <div class="lobby__hint">
+                    <strong><span id="countTotal">0</span></strong> listos
+                </div>
+            </div>
+
+            <!-- Grid de jugadores -->
+            <div class="lobby__grid" role="list" aria-label="Jugadores en la sala" id="players-list">
+            </div>
+
+            <!-- Live region para lectores de pantalla -->
+            <div class="lobby__live" aria-live="polite" id="liveAnnouncer"></div>
+
+            <!-- Pie: Ready para invitados / Iniciar para host -->
+            <footer class="lobby__footer">
+                <div class="lobby__left">
+                    Mínimo recomendado: <strong>2 jugadores</strong>
+                </div>
+                <!-- Host ve "Iniciar juego" -->
+                <div class="lobby__right host-only">
+                    <button class="btn start-btn" id="startBtn" type="button" disabled>Iniciar juego</button>
+                </div>
+            </footer>
+        </div>
+    </section>
+</body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+<script>
+     // Helpers seguros
+    const qs  = (s, el=document) => el.querySelector(s);
+    const qsa = (s, el=document) => Array.from(el.querySelectorAll(s));
+    let jugadores = [];
+
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const codigo = urlParams.get('codigo') || localStorage.getItem('codigo');
+    const nombre = localStorage.getItem('nombre');
+    const avatarLocal = (localStorage.getItem('avatar') || '').trim();
+
+    // Verificar que tenemos los datos necesarios
+    if (!codigo || !nombre) {
+        window.location.href = '/';
+    }
+    
+    const roomCodeValueEl = qs('#roomCodeValue');
+    const playersList = qs('#players-list');
+    const countTotalEl = qs('#countTotal');
+    const startBtn = qs('#startBtn')
+    const copyBtn = qs('#copyBtn');
+    const spanAnfitrion = qs('#roleBadge');
+
+    roomCodeValueEl.textContent = codigo;
+
+    
+    function normalizeAvatar(key){
+        const k = (key || '').toString().trim().toLowerCase();
+        // Mapea variantes femeninas/singulares/plurales si llegan
+        if (k.startsWith('granjer')) return 'granjero';
+        if (k.startsWith('apicul')) return 'apicultor';
+        if (k.startsWith('vaquer')) return 'vaquera';
+        if (k.startsWith('horti'))  return 'horticultor';
+        if (k.startsWith('ranche') || k.startsWith('ranche')) return 'ranchero';
+        return k;
+    }
+    function getAvatarUrl(key){
+      const map = {
+        'granjero': '/static/Granjero.png',
+        'apicultor': '/static/Apicultor.png',
+        'vaquera': '/static/Vaquera.png',
+        'horticultor': '/static/Horticultor.png',
+        'ranchero': '/static/Ranchero.png'
+      };
+      const norm = normalizeAvatar(key);
+      return map[norm] || '/static/avatar-placeholder.png';
+    }
+
+    if (copyBtn){
+      copyBtn.addEventListener('click', async () => {
+        try{
+          await navigator.clipboard.writeText(roomCodeValueEl.textContent.trim());
+          copyBtn.textContent = '¡Copiado!';
+          setTimeout(() => copyBtn.textContent = 'Copiar código', 1600);
+        }catch(e){
+          alert('Copia manual: ' + roomCodeValueEl.textContent.trim());
+        }
+      });
+    }
+    function renderPlayers(){
+      // Limpia
+      playersList.innerHTML = '';
+
+      jugadores.forEach((jugador, idx) => {
+        const isHost = idx === 0;
+
+        const card = document.createElement('article');
+        card.className = 'player-card status--ready';
+        card.setAttribute('role', 'listitem');
+        card.setAttribute('aria-label', `${jugador.nombre}, listo`);
+
+        const avatarKey = jugador.avatar || (isHost ? avatarLocal : null);
+
+        card.innerHTML = `
+          <div class="player-card__avatar">
+            <img src="${getAvatarUrl(jugador.avatar)}" alt="Avatar de ${jugador.nombre}">
+          </div>
+          <div class="player-card__name">${jugador.nombre} ${isHost ? '(Anfitrión)' : ''}</div>
+          <div class="player-card__meta">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Listo</span>
+          </div>
+        `;
+        playersList.appendChild(card);
+      });
+
+      // Placeholders hasta un máximo (ej. 10 slots totales)
+      const MAX_SLOTS = 5;
+      for (let i=jugadores.length; i<MAX_SLOTS; i++){
+        const ph = document.createElement('article');
+        ph.className = 'player-card is-placeholder';
+        ph.setAttribute('role','listitem');
+        ph.setAttribute('aria-label','Espacio disponible');
+        ph.innerHTML = `
+          <div class="player-card__avatar"></div>
+          <div class="player-card__name">Buscando jugador…</div>
+          <div class="player-card__meta">
+            <span class="status-dot" aria-hidden="true"></span>
+            <span>Libre</span>
+          </div>
+        `;
+        playersList.appendChild(ph);
+      }
+
+      countTotalEl.textContent = String(jugadores.length);
+
+
+      // Host detection: el host es el primer jugador por convención
+      const esAnfitrion = jugadores.length > 0 && jugadores[0].nombre === nombre;
+      
+      spanAnfitrion.textContent = esAnfitrion  ? 'Anfitrión' : 'Invitado';
+      spanAnfitrion.classList.toggle('badge--host', esAnfitrion);
+      document.body.classList.toggle('is-host', esAnfitrion);
+
+      if (startBtn){
+        startBtn.disabled = !esAnfitrion || jugadores.length < 2;
+      }
+
+      // Live region
+      const live = qs('#liveAnnouncer');
+      if (live){
+        live.textContent = `Jugadores en sala: ${jugadores.length}.`;
+      }
+    }
+
+    const socket = io({
+        transports: ['websocket', 'polling'],
+      });
+
+      
+    socket.on('connect', () => {
+      console.log('[SOCK] conectado', socket.id, '→ join_room', codigo);
+      // ÚNETE SOLO al conectar y ENVÍA nombre + avatar
+      socket.emit('join_room', { room: codigo, nombre, avatar: avatarLocal });
+    });
+    
+    socket.on('connect_error', (e) => console.error('[SOCK] connect_error', e));
+    socket.on('disconnect', (r) => console.warn('[SOCK] disconnect', r));
+
+    socket.on('jugadores_actualizados', (data) => {
+      console.log('[SOCK] jugadores_actualizados', data);
+      if (data && Array.isArray(data.jugadores)) {
+        jugadores = data.jugadores;
+        // Normaliza avatares entrantes
+        jugadores = jugadores.map(j => ({ ...j, avatar: normalizeAvatar(j.avatar) }));
+        renderPlayers();
+      }
+    });
+   socket.on('juego_iniciado', function(){
+      window.location.href = `/juego?codigo=${encodeURIComponent(codigo)}`;
+    });
+
+
+    // Iniciar juego (host)
+    if (startBtn){
+      startBtn.addEventListener('click',  async () => {
+        if (startBtn.disabled) return;
+        try{
+              const resp = await fetch('/iniciar_juego', { method:'POST' });
+              const data = await resp.json();
+              if (!data.success){
+                alert(data.error || 'No se pudo iniciar el juego');
+                return;
+              }
+              startBtn.textContent = '¡Vamos!';
+        }catch(e){
+              console.error(e);
+              alert('Error de red al iniciar el juego');
+        }
+
+      });
+    }
+</script>
+
+</html>

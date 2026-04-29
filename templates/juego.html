@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Juego – Hundir la Granja</title>
+  <link rel="stylesheet" href="/static/styles_juego.css">
+</head>
+
+<body class="game-body">
+  <div id="gameLiveRegion" class="sr-only" aria-live="polite"></div>
+
+  <header class="game-header">
+    <div class="game-header__left">
+      <span class="brand__icon"></span>
+      <h1 class="game-title">Hundir la Granja</h1>
+    </div>
+    <div class="game-header__right">
+      <div class="turn-indicator">Turno de: <strong id="turnPlayer">–</strong></div>
+      <button id="exitGameBtn" class="btn btn--ghost game-exit">Salir</button>
+    </div>
+  </header>
+
+  <main class="game-layout">
+    <!-- PANEL IZQUIERDO: Poderes + Log -->
+    <aside class="game-sidebar game-sidebar--left">
+      <div class="game-panel powers-panel">
+        <h2 class="panel-title">⚡ Poderes</h2>
+        <ul id="powersList" class="power-list"></ul>
+        <button id="usePowerBtn" class="btn btn--primary power-btn" disabled>Usar poder</button>
+      </div>
+      <div class="game-panel log-panel">
+        <h2 class="panel-title">📋 Log</h2>
+        <ul id="commentsList" class="comments-list"></ul>
+      </div>
+    </aside>
+
+    <!-- TABLERO CENTRAL -->
+    <section class="game-board-wrapper">
+      <div class="game-board-title">Tu Granja</div>
+      <div id="gameBoard" class="game-board"></div>
+    </section>
+
+    <!-- PANEL DERECHO: Jugadores -->
+    <aside class="game-sidebar game-sidebar--right">
+      <div class="game-panel players-panel">
+        <h2 class="panel-title">Jugadores</h2>
+        <ul id="playersList" class="players-list"></ul>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Modal resultado -->
+  <div class="modal" id="structureModal">
+    <div class="modal__panel">
+      <header class="modal__header">
+        <h3 class="modal__title" id="tituloModal"> Resultado del Impacto</h3>
+        <button class="modal__close" id="closeStructureModal">✕</button>
+      </header>
+      <div class="modal__body"><p id="structureMessage">–</p></div>
+      <footer class="modal__footer">
+        <button class="btn btn--primary" id="ackStructureModal">Continuar</button>
+      </footer>
+    </div>
+  </div>
+  <!-- Modal Historia Inicial -->
+  <div class="modal is-open" id="introStoryModal" aria-modal="true" role="dialog">
+    <div class="modal__panel intro-panel">
+      <header class="modal__header">
+        <h2 class="modal__title">🌾 La Disputa de la Gran Llanura</h2>
+      </header>
+
+      <div class="modal__body intro-story">
+        <p>
+          <strong>Hace muchos ciclos…</strong><br>
+          En la Gran Llanura, las granjas vivían en equilibrio.
+          Cada familia cuidaba su tierra y compartía la cosecha bajo el mismo sol.
+        </p>
+
+        <p>
+          <strong>Pero una sequía inesperada lo cambió todo.</strong><br>
+          El agua escaseó, los caminos se cerraron y las reservas comenzaron a agotarse.
+        </p>
+
+        <p>
+          <strong>El Consejo de la Llanura ha decidido.</strong><br>
+          Para evitar una guerra total, los granjeros resolverán la disputa
+          con estrategia, astucia y engaño.
+        </p>
+
+        <p class="intro-highlight">
+          Solo el granjero más astuto guiará el futuro de la llanura.
+        </p>
+      </div>
+
+      <footer class="modal__footer">
+        <button class="btn btn--primary" id="startStoryBtn">
+          Comenzar la contienda 🌱
+        </button>
+      </footer>
+    </div>
+  </div>
+  <!-- Modal: Granjeros Rivales -->
+  <div class="modal" id="rivalsModal" aria-modal="true" role="dialog">
+    <div class="modal__panel rivals-panel">
+      <header class="modal__header">
+        <h2 class="modal__title">🧑‍🌾 Granjeros en la Gran Llanura</h2>
+        <p class="modal__subtitle">
+          Antes de comenzar, conoce a quiénes te enfrentarás.
+        </p>
+      </header>
+
+      <div class="modal__body rivals-list" id="rivalsList">
+        <!-- Se llena dinámicamente -->
+      </div>
+
+      <footer class="modal__footer">
+        <button class="btn btn--primary" id="rivalsReadyBtn">
+          Estamos listos 🌱
+        </button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: Fin del juego -->
+  <div class="modal" id="gameOverModal" aria-modal="true" role="dialog">
+    <div class="modal__panel gameover-panel">
+      <header class="modal__header gameover-header">
+        <h2 class="modal__title" id="gameOverTitle">🌅 Fin de la contienda</h2>
+      </header>
+      <div class="modal__body gameover-body">
+        <p id="gameOverMessage" class="gameover-message">–</p>
+      </div>
+      <footer class="modal__footer">
+        <button class="btn btn--primary" id="gameOverExitBtn">Volver al inicio 🏠</button>
+      </footer>
+    </div>
+  </div>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+  <script src="/static/juego.js"></script>
+</body>
+</html>
