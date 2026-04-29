@@ -1414,3 +1414,152 @@ body.game-body{
   from{ opacity: 0.7; }
   to{ opacity: 0.9; }
 }
+
+
+/* ==========================================
+   Dark Mode — Pantalla de juego completa
+========================================== */
+@media (prefers-color-scheme: dark){
+
+  /* Header */
+  .game-header{
+    background: linear-gradient(180deg, #1a211c, #161c18);
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  .game-title{ color: #e8efe9; }
+  .turn-indicator{
+    background: #2a2a1a;
+    border-color: rgba(255,255,255,.08);
+    color: #f5d97a;
+  }
+
+  /* Paneles laterales */
+  .game-panel{
+    background: linear-gradient(180deg, #1a211c, #161c18);
+    border-color: rgba(255,255,255,.08);
+  }
+  .panel-title{ color: #e8efe9; }
+
+  /* Poderes */
+  .power-item{
+    background: #1e2620;
+    border-color: rgba(255,255,255,.08);
+    color: #e8efe9;
+  }
+  .power-item:hover{ border-color: rgba(127,193,91,.3); }
+  .power-item.active{
+    background: #1e2e1a;
+    border-color: var(--primary);
+    color: #e8efe9;
+  }
+  .power-item small{ color: #8a9a8e !important; }
+
+  /* Log */
+  .comments-list li{
+    background: #1e2620;
+    border-color: rgba(255,255,255,.06);
+    color: #c8d5ca;
+  }
+
+  /* Lista de jugadores */
+  .player-item{
+    background: #1e2620;
+    border-color: rgba(255,255,255,.08);
+  }
+  .player-item:hover{ border-color: rgba(127,193,91,.3); }
+  .player-item.is-me{
+    background: #1e2e1a;
+    border-color: var(--primary);
+  }
+  .player-item__name{ color: #e8efe9; }
+  .player-item.eliminated .player-item__name{ color: #6b7a6e; }
+
+  /* Tablero */
+  .game-board-title{ color: #e8efe9; }
+  .game-board{
+    background: #1a2e1a;
+    border-color: #3a5a2a;
+  }
+  .game-cell{
+    border-color: rgba(255,255,255,.08);
+    color: #e8efe9;
+  }
+  .game-cell:hover{ background: rgba(255,255,255,.08); }
+  .game-cell.structure{
+    background: #3a3520;
+    border-color: #5a4a2a;
+  }
+  .game-cell.miss{ color: #fff; }
+  .game-cell.hit{ color: #fff; }
+
+  /* Modales */
+  .modal__panel{
+    background: #1a211c;
+    border-color: rgba(255,255,255,.08);
+  }
+  .modal__header{
+    background: linear-gradient(180deg, #222a24, #1e2620);
+    border-bottom-color: rgba(255,255,255,.08);
+  }
+  .modal__title{ color: #e8efe9; }
+  .modal__subtitle{ color: #8a9a8e; }
+  .modal__body p{ color: #c8d5ca; }
+  #structureMessage{ color: #c8d5ca; }
+
+  /* Modal intro */
+  .intro-panel{
+    background: linear-gradient(180deg, #1e2620, #1a211c);
+  }
+  .intro-story{ color: #c8d5ca; }
+  .intro-story strong{ color: #e8efe9; }
+  .intro-highlight{
+    background: #2a2a1a;
+    border-left-color: #d29922;
+    color: #f5d97a;
+  }
+
+  /* Modal rivales */
+  .rivals-panel{
+    background: linear-gradient(180deg, #1e2620, #1a211c);
+  }
+  .rival-card{
+    background: #222a24;
+    border-color: rgba(255,255,255,.08);
+  }
+  .rival-name{ color: #e8efe9; }
+  .rival-role{ color: #7fc15b; }
+  .rival-story{ color: #aeb9b1; }
+
+  /* Modal game over */
+  .gameover-panel{
+    background: linear-gradient(180deg, #1e2620, #1a211c);
+  }
+  .gameover-header{
+    background: linear-gradient(180deg, #222a24, #1e2620);
+  }
+  .gameover-message{ color: #c8d5ca; }
+
+  /* Botones */
+  .btn--ghost{
+    background: #242d26;
+    color: #e8efe9;
+    border-color: rgba(255,255,255,.08);
+  }
+  .game-exit{ color: #e8efe9; }
+
+  /* Celdas escaneadas */
+  .game-cell.scanned-has{
+    background-image: linear-gradient(180deg, rgba(243,156,18,.2) 0%, rgba(243,156,18,.08) 50%, rgba(243,156,18,.2) 100%);
+  }
+  .game-cell.scanned-empty{
+    background-image: linear-gradient(180deg, rgba(52,152,219,.15) 0%, rgba(52,152,219,.05) 50%, rgba(52,152,219,.15) 100%);
+  }
+
+  /* Celdas reveladas */
+  .game-cell.revealed-has{
+    background: rgba(231,76,60,.3);
+  }
+  .game-cell.revealed-empty{
+    background: rgba(52,152,219,.2);
+  }
+}
