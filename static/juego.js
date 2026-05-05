@@ -396,11 +396,14 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   function handleCellClick(x, y){
     // Cerrar modal de resultado si está abierto para no bloquear
     closeModal();
-    // Poder instantáneo seleccionado: activarlo antes de disparar
+    // Poder instantáneo seleccionado: activarlo
     if (state.selectedPower && INSTANT_POWERS.includes(state.selectedPower.key)){
+      const powerKey = state.selectedPower.key;
       activateInstantPower(state.selectedPower);
-      // Después de activar, ejecutar el disparo normalmente
-      fireAt(x, y);
+      // Solo doble_tiro dispara después de activarse
+      if (powerKey === 'doble_tiro') {
+        fireAt(x, y);
+      }
       return;
     }
     // Poder con celda seleccionado
