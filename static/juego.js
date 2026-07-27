@@ -257,20 +257,27 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       usePowerBtn.disabled = true;
       return;
     }
+    
+    const isMyTurn = state.currentTurnPlayerId === state.myId;
+    
     state.myPowers.forEach(pwr => {
       const li = document.createElement('li');
       const isActive = state.selectedPower?.key === pwr.key;
-      li.className = 'power-item' + (isActive ? ' active' : '');
+      li.className = 'power-item' + (isActive ? ' active' : '') + (!isMyTurn ? ' disabled' : '');
       const isInstant = INSTANT_POWERS.includes(pwr.key);
       li.innerHTML = `<span>${pwr.label}</span><small style="color:#999;font-size:11px">${isInstant ? '(auto)' : '(celda)'}</small>`;
       on(li, 'click', ()=>{
+        if (!isMyTurn) {
+          announce('⚠️ No es tu turno');
+          return;
+        }
         state.selectedPower = isActive ? null : pwr;
         usePowerBtn.disabled = !state.selectedPower;
         renderPowers();
       });
       powersListEl.appendChild(li);
     });
-    usePowerBtn.disabled = !state.selectedPower;
+    usePowerBtn.disabled = !state.selectedPower || !isMyTurn;
   }
 
   function renderComment(msg){
@@ -396,6 +403,13 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   function handleCellClick(x, y){
     // Cerrar modal de resultado si está abierto para no bloquear
     closeModal();
+    
+    // Validar que es tu turno antes de cualquier acción
+    if (state.currentTurnPlayerId !== state.myId) {
+      announce('⚠️ No es tu turno');
+      return;
+    }
+    
     // Poder instantáneo seleccionado: activarlo
     if (state.selectedPower && INSTANT_POWERS.includes(state.selectedPower.key)){
       const powerKey = state.selectedPower.key;
@@ -439,6 +453,13 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
 
   function activateInstantPower(pwr){
     if (!socket) return;
+    
+    // Validar que es tu turno
+    if (state.currentTurnPlayerId !== state.myId) {
+      announce('⚠️ No es tu turno');
+      return;
+    }
+    
     socket.emit('usar_poder', {
       room: roomCode, x: 0, y: 0,
       power: pwr.key,
@@ -453,6 +474,13 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   function usePowerAtCell(x, y){
     const pwr = state.selectedPower;
     if (!pwr || !socket) return;
+    
+    // Validar que es tu turno
+    if (state.currentTurnPlayerId !== state.myId) {
+      announce('⚠️ No es tu turno');
+      return;
+    }
+    
     socket.emit('usar_poder', {
       room: roomCode, x, y,
       power: pwr.key
@@ -526,11 +554,13 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       const misses = realResults.filter(r => !r.hit);
 
       if (hits.length === 0) {
-        const title ='💨 Golpe al vacío';
+        // Solo agua - no mostrar modal, solo anunciar
         const msg = `${who} lanzó un ataque en (${x+1},${y+1}), pero solo levantó polvo. La llanura sigue intacta.`;
         announce(msg);
-        openModal(msg,title);
       } else {
+        // Verificar si hay estructuras hundidas o trampas
+        const hasSunkOrDecoy = hits.some(r => r.sunk || r.decoy);
+        
         hits.forEach(r => {
           let msg;
           if (r.decoy) {
@@ -547,14 +577,17 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
         if (misses.length > 0) {
           announce(`💨 El ataque de ${who} no encontró nada en las granjas de ${misses.map(r=>r.targetName).join(', ')}.`);
         }
-        // Modal con resumen
-        const summary = hits.map(r => {
-          if (r.decoy) return `🎭 ${r.targetName}: ¡Trampa! Golpe en vano.`;
-          if (r.sunk) return `🔥 ${r.targetName}: ${r.structureName || 'Estructura'} destruida.`;
-          if (r.hpLeft > 0) return `⚠️ ${r.targetName}: ${r.structureName || 'Estructura'} dañada, resiste.`;
-          return `💥 ${r.targetName}: ${r.structureName || 'Estructura'} alcanzada.`;
-        }).join('\n');
-        openModal(summary,'⚔️ Resultado del ataque');
+        
+        // Modal solo si hay estructuras hundidas o trampas
+        if (hasSunkOrDecoy) {
+          const summary = hits.map(r => {
+            if (r.decoy) return `🎭 ${r.targetName}: ¡Trampa! Golpe en vano.`;
+            if (r.sunk) return `🔥 ${r.targetName}: ${r.structureName || 'Estructura'} destruida.`;
+            if (r.hpLeft > 0) return `⚠️ ${r.targetName}: ${r.structureName || 'Estructura'} dañada, resiste.`;
+            return `💥 ${r.targetName}: ${r.structureName || 'Estructura'} alcanzada.`;
+          }).join('\n');
+          openModal(summary,'⚔️ Resultado del ataque');
+        }
       }
     });
 
