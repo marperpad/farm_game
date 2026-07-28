@@ -61,6 +61,7 @@ def serialize_room_state(state) -> str:
         'round_count': state.round_count,
         'powers': state.powers,
         'turn_deadline': state.turn_deadline,
+        'retro_comments': state.retro_comments,
     })
 
 def deserialize_room_state(data_str: str):
@@ -72,6 +73,7 @@ def deserialize_room_state(data_str: str):
     state.boards = d['boards']
     state.powers = d['powers']
     state.turn_deadline = d.get('turn_deadline', 0.0)
+    state.retro_comments = d.get('retro_comments', [])
     for pd_item in d['players']:
         state.players.append(Player(**pd_item))
     return state
@@ -132,6 +134,7 @@ class RoomState:
     round_count: int = 0
     powers: Dict[str, List[dict]] = field(default_factory=dict)       # player_id -> [powers]
     turn_deadline: float = 0.0
+    retro_comments: List[dict] = field(default_factory=list)  # [{type, player, comment, timestamp}]
 
 rooms_game: Dict[str, RoomState] = {}  # code -> RoomState
 
@@ -147,8 +150,6 @@ STRUCT_NAMES = {
 }
 POWERS_POOL = [
     {'key': 'revelar_2x2',      'label': 'Revelar área 2x2'},
-    {'key': 'mover_estructura', 'label': 'Mover 1 estructura'},
-    {'key': 'senial',           'label': 'Casilla señuelo'},
     {'key': 'doble_tiro',       'label': 'Doble tiro'},
     {'key': 'escanear_linea',   'label': 'Escanear fila/columna'},
 ]
@@ -702,6 +703,9 @@ def iniciar_juego():
     if room['jugadores'][0]['nombre'] != nombre:
         return jsonify({'success': False, 'error': 'Solo el anfitrión puede iniciar'})
     
+    print(f'[DEBUG] Número de jugadores en sala {codigo}: {len(room["jugadores"])}')
+    print(f'[DEBUG] Jugadores: {[j["nombre"] for j in room["jugadores"]]}')
+    
     if len(room['jugadores']) < 2:
         return jsonify({'success': False, 'error': 'No hay suficientes jugadores'}), 400
     
@@ -1163,6 +1167,105 @@ def on_disconnect():
         del user_sessions[sid]
     # Don't remove player from game state - they might reconnect
     # Just leave the room for socket purposes
+
+# ---------- Retrospectiva Endpoints ----------
+
+@socketio.on('agregar_comentario_retro')
+def on_agregar_comentario_retro(data):
+    """Agrega un comentario de retrospectiva (bien o mal del sprint)"""
+    code = (data.get('room') or '').upper()
+    comment_type = data.get('type')  # 'good' o 'bad'
+    comment_text = (data.get('comment') or '').strip()
+    
+    if not code or code not in rooms_game:
+        return
+    
+    state = rooms_game[code]
+    player = find_player(state, by_sid=request.sid)
+    if not player:
+        nombre = session.get('nombre')
+        if nombre:
+            player = find_player(state, by_name=nombre)
+            if player:
+                player.sid = request.sid
+    
+    if not player or not comment_text:
+        emit('comentario_retro_resultado', {'ok': False, 'error': 'Datos inválidos'}, room=request.sid)
+        return
+    
+    # Agregar comentario
+    retro_entry = {
+        'type': comment_type,
+        'player': player.nombre,
+        'comment': comment_text,
+        'timestamp': time.time()
+    }
+    state.retro_comments.append(retro_entry)
+    
+    # Emitir a toda la sala que se agregó un comentario
+    emit('comentario_retro_agregado', {
+        'type': comment_type,
+        'player': player.nombre,
+        'comment': comment_text
+    }, to=code)
+    
+    emit('comentario_retro_resultado', {'ok': True}, room=player.sid)
+    save_game_state(code)
+
+@app.route('/descargar_retrospectiva/<codigo>')
+def descargar_retrospectiva(codigo):
+    """Descarga el log de retrospectiva en formato de texto"""
+    codigo = codigo.upper()
+    if codigo not in rooms_game:
+        return "Sala no encontrada", 404
+    
+    state = rooms_game[codigo]
+    
+    # Generar contenido del archivo
+    lines = []
+    lines.append("=" * 60)
+    lines.append("RETROSPECTIVA DEL SPRINT - Hundir la Granja")
+    lines.append("=" * 60)
+    lines.append(f"Sala: {codigo}")
+    lines.append(f"Fecha: {time.strftime('%Y-%m-%d %H:%M:%S')}")
+    lines.append(f"Jugadores: {', '.join([p.nombre for p in state.players])}")
+    lines.append("")
+    
+    # Agrupar comentarios por tipo
+    good_comments = [c for c in state.retro_comments if c['type'] == 'good']
+    bad_comments = [c for c in state.retro_comments if c['type'] == 'bad']
+    
+    lines.append("✅ QUÉ SALIÓ BIEN DEL SPRINT")
+    lines.append("-" * 60)
+    if good_comments:
+        for i, comment in enumerate(good_comments, 1):
+            lines.append(f"{i}. [{comment['player']}] {comment['comment']}")
+    else:
+        lines.append("(Sin comentarios)")
+    lines.append("")
+    
+    lines.append("❌ QUÉ SALIÓ MAL DEL SPRINT")
+    lines.append("-" * 60)
+    if bad_comments:
+        for i, comment in enumerate(bad_comments, 1):
+            lines.append(f"{i}. [{comment['player']}] {comment['comment']}")
+    else:
+        lines.append("(Sin comentarios)")
+    lines.append("")
+    
+    lines.append("=" * 60)
+    lines.append(f"Total de comentarios: {len(state.retro_comments)}")
+    lines.append(f"Bien: {len(good_comments)} | Mal: {len(bad_comments)}")
+    lines.append("=" * 60)
+    
+    content = '\n'.join(lines)
+    
+    from flask import Response
+    return Response(
+        content,
+        mimetype='text/plain',
+        headers={'Content-Disposition': f'attachment; filename=retrospectiva_{codigo}.txt'}
+    )
 
 init_db()
 load_all_state()

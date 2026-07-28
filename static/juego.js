@@ -54,7 +54,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     { hit:'#fdcb6e', miss:'#fdcb6e80', label:'Dorado' },
   ];
 
-  const INSTANT_POWERS = ['doble_tiro', 'mover_estructura', 'senial'];
+  const INSTANT_POWERS = ['doble_tiro'];
 
   const state = {
     players: [],
@@ -260,6 +260,13 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     
     const isMyTurn = state.currentTurnPlayerId === state.myId;
     
+    console.log('[DEBUG] renderPowers:', {
+      myId: state.myId,
+      currentTurnPlayerId: state.currentTurnPlayerId,
+      isMyTurn: isMyTurn,
+      powersCount: state.myPowers.length
+    });
+    
     state.myPowers.forEach(pwr => {
       const li = document.createElement('li');
       const isActive = state.selectedPower?.key === pwr.key;
@@ -269,6 +276,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       on(li, 'click', ()=>{
         if (!isMyTurn) {
           announce('⚠️ No es tu turno');
+          console.log('[DEBUG] Intento de usar poder fuera de turno');
           return;
         }
         state.selectedPower = isActive ? null : pwr;
@@ -510,6 +518,80 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
 
   on(exitGameBtn, 'click', ()=>{ window.location.href = '/'; });
 
+  /* ---- Retrospectiva ---- */
+  
+  const badCommentModal = qs('#badCommentModal');
+  const goodCommentModal = qs('#goodCommentModal');
+  const badCommentText = qs('#badCommentText');
+  const goodCommentText = qs('#goodCommentText');
+  const downloadRetroBtn = qs('#downloadRetroBtn');
+  
+  function openBadCommentModal() {
+    if (!badCommentModal) return;
+    badCommentText.value = '';
+    badCommentModal.classList.add('is-open');
+  }
+  
+  function closeBadCommentModal() {
+    if (!badCommentModal) return;
+    badCommentModal.classList.remove('is-open');
+  }
+  
+  function openGoodCommentModal() {
+    if (!goodCommentModal) return;
+    goodCommentText.value = '';
+    goodCommentModal.classList.add('is-open');
+  }
+  
+  function closeGoodCommentModal() {
+    if (!goodCommentModal) return;
+    goodCommentModal.classList.remove('is-open');
+  }
+  
+  function submitBadComment() {
+    const comment = badCommentText.value.trim();
+    if (!comment || !socket) {
+      closeBadCommentModal();
+      return;
+    }
+    socket.emit('agregar_comentario_retro', {
+      room: roomCode,
+      type: 'bad',
+      comment: comment
+    });
+    closeBadCommentModal();
+    announce(`❌ Agregaste un comentario de retrospectiva: ${comment.substring(0, 30)}...`);
+  }
+  
+  function submitGoodComment() {
+    const comment = goodCommentText.value.trim();
+    if (!comment || !socket) {
+      closeGoodCommentModal();
+      return;
+    }
+    socket.emit('agregar_comentario_retro', {
+      room: roomCode,
+      type: 'good',
+      comment: comment
+    });
+    closeGoodCommentModal();
+    announce(`✅ Agregaste un comentario de retrospectiva: ${comment.substring(0, 30)}...`);
+  }
+  
+  // Event listeners para modales de retrospectiva
+  on(qs('#closeBadCommentModal'), 'click', closeBadCommentModal);
+  on(qs('#skipBadComment'), 'click', closeBadCommentModal);
+  on(qs('#submitBadComment'), 'click', submitBadComment);
+  
+  on(qs('#closeGoodCommentModal'), 'click', closeGoodCommentModal);
+  on(qs('#skipGoodComment'), 'click', closeGoodCommentModal);
+  on(qs('#submitGoodComment'), 'click', submitGoodComment);
+  
+  // Botón de descarga
+  on(downloadRetroBtn, 'click', () => {
+    window.location.href = `/descargar_retrospectiva/${roomCode}`;
+  });
+
   /* ---- Socket ---- */
   if (socket){
     socket.on('connect', () => {
@@ -526,6 +608,14 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
         state.myId = data.you?.id || state.myId;
         state.myColorIndex = data.you?.colorIndex ?? 0;
         state.currentTurnPlayerId = data.turnoActualId;
+        
+        console.log('[DEBUG] Estado recibido:', {
+          myId: state.myId,
+          currentTurnPlayerId: state.currentTurnPlayerId,
+          isMyTurn: state.currentTurnPlayerId === state.myId,
+          youData: data.you
+        });
+        
         if (data.boardSize) state.boardSize = data.boardSize;
         if (Array.isArray(data.powers)) state.myPowers = data.powers;
 
@@ -587,6 +677,16 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
             return `💥 ${r.targetName}: ${r.structureName || 'Estructura'} alcanzada.`;
           }).join('\n');
           openModal(summary,'⚔️ Resultado del ataque');
+          
+          // Si el jugador actual hundió una estructura (no trampa), mostrar modal de comentario malo
+          const isMe = who === myName;
+          const hasSunk = hits.some(r => r.sunk && !r.decoy);
+          if (isMe && hasSunk) {
+            // Esperar a que se cierre el modal de resultado antes de abrir el de retrospectiva
+            setTimeout(() => {
+              openBadCommentModal();
+            }, 3500);
+          }
         }
       }
     });
@@ -597,11 +697,21 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       setTurnInfo(turnP?.nombre || '—', turnoActualAvatar || turnP?.avatar);
       if (deadline) startTurnTimer(deadline, duration);
 
+      console.log('[DEBUG] Turno siguiente:', {
+        myId: state.myId,
+        currentTurnPlayerId: state.currentTurnPlayerId,
+        isMyTurn: state.currentTurnPlayerId === state.myId,
+        turnPlayerName: turnP?.nombre
+      });
+
       // Limpiar celdas reveladas al cambiar de turno
       if (state.revealedCells.length > 0) {
         state.revealedCells = [];
         renderBoard();
       }
+      
+      // Re-renderizar poderes para actualizar estado disabled
+      renderPowers();
     });
 
     // El servidor envía el tablero actualizado al dueño tras cada disparo recibido
@@ -664,6 +774,11 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       // Consumir el poder de la lista local solo cuando el servidor confirma
       state.myPowers = state.myPowers.filter(p => p.key !== data.power);
       renderPowers();
+      
+      // Mostrar modal de comentario bueno cuando se usa un poder exitosamente
+      setTimeout(() => {
+        openGoodCommentModal();
+      }, 500);
 
       if (data.power === 'revelar_2x2'){
         const reveals = data.reveals || [];
@@ -770,6 +885,12 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
     socket.on('reconnect', () => {
       socket.emit('join_game', { room: roomCode, nombre: myName, avatar: myAvatarKey });
       announce('🔄 Reconectado al servidor.');
+    });
+    
+    // --- Retrospectiva ---
+    socket.on('comentario_retro_agregado', ({ type, player, comment }) => {
+      const icon = type === 'good' ? '✅' : '❌';
+      announce(`${icon} ${player}: ${comment}`);
     });
   }
 

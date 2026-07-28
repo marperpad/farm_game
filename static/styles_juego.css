@@ -1144,6 +1144,24 @@ body.is-host .guest-only{ display:none; }
   overflow:hidden;
   clip:rect(1px,1px,1px,1px);
 }
+
+/* ---------- RETROSPECTIVA ---------- */
+.retro-textarea{
+  width: 100%;
+  min-height: 80px;
+  padding: 10px;
+  border: 1.5px solid #d9d9d9;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+  transition: border-color .12s ease, box-shadow .12s ease;
+}
+.retro-textarea:focus{
+  border-color: #a5d06f;
+  box-shadow: 0 0 0 3px rgba(146,201,94,.22);
+}
 /* ===============================
    Historia inicial del juego
 ================================ */

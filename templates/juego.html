@@ -21,6 +21,7 @@
         Turno de: <strong id="turnPlayer">–</strong>
         <span id="turnTimer" class="turn-timer"></span>
       </div>
+      <button id="downloadRetroBtn" class="btn btn--ghost" title="Descargar retrospectiva">📋 Retro</button>
       <button id="exitGameBtn" class="btn btn--ghost game-exit">Salir</button>
     </div>
   </header>
@@ -184,6 +185,42 @@
       </div>
       <footer class="modal__footer">
         <button class="btn btn--primary" id="gameOverExitBtn">Volver al inicio 🏠</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: Comentario malo (estructura hundida) -->
+  <div class="modal" id="badCommentModal" aria-modal="true" role="dialog">
+    <div class="modal__panel">
+      <header class="modal__header">
+        <h3 class="modal__title">❌ ¿Qué salió mal del sprint?</h3>
+        <button class="modal__close" id="closeBadCommentModal">✕</button>
+      </header>
+      <div class="modal__body">
+        <p style="margin-bottom: 12px; color: #6b5a3a;">Has hundido una estructura. Comparte algo que salió mal en el sprint:</p>
+        <textarea id="badCommentText" class="retro-textarea" placeholder="Ejemplo: Faltó planificación en las historias..."></textarea>
+      </div>
+      <footer class="modal__footer">
+        <button class="btn btn--ghost" id="skipBadComment">Omitir</button>
+        <button class="btn btn--primary" id="submitBadComment">Agregar</button>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Modal: Comentario bueno (poder usado) -->
+  <div class="modal" id="goodCommentModal" aria-modal="true" role="dialog">
+    <div class="modal__panel">
+      <header class="modal__header">
+        <h3 class="modal__title">✅ ¿Qué salió bien del sprint?</h3>
+        <button class="modal__close" id="closeGoodCommentModal">✕</button>
+      </header>
+      <div class="modal__body">
+        <p style="margin-bottom: 12px; color: #6b5a3a;">Has usado un poder. Comparte algo que salió bien en el sprint:</p>
+        <textarea id="goodCommentText" class="retro-textarea" placeholder="Ejemplo: Mejoramos la comunicación del equipo..."></textarea>
+      </div>
+      <footer class="modal__footer">
+        <button class="btn btn--ghost" id="skipGoodComment">Omitir</button>
+        <button class="btn btn--primary" id="submitGoodComment">Agregar</button>
       </footer>
     </div>
   </div>
