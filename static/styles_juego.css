@@ -503,6 +503,15 @@ h1 .accent{
 .btn--primary:active{ transform: translateY(0); filter: brightness(.98); }
 .btn--primary:focus-visible{ outline: var(--ring) solid #92c95e; outline-offset: 3px; }
 
+.btn--secondary{
+  background: linear-gradient(180deg, var(--secondary), #b8831e);
+  color: #fff;
+  box-shadow: 0 10px 20px rgba(210,153,34,.25);
+}
+.btn--secondary:hover{ transform: translateY(-1px); }
+.btn--secondary:active{ transform: translateY(0); filter: brightness(.98); }
+.btn--secondary:focus-visible{ outline: var(--ring) solid #f5d97a; outline-offset: 3px; }
+
 /* Etiquetas y errores (si deseas validación) */
 .error{
   color: #9b2c2c;

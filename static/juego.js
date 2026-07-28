@@ -518,13 +518,21 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
 
   on(exitGameBtn, 'click', ()=>{ window.location.href = '/'; });
 
+  // Botón para descargar retrospectiva en cualquier momento
+  const downloadRetroHeaderBtn = qs('#downloadRetroBtn');
+  if (downloadRetroHeaderBtn) {
+    on(downloadRetroHeaderBtn, 'click', ()=>{
+      window.location.href = `/descargar_retrospectiva/${roomCode}`;
+      announce('📥 Descargando retrospectiva...');
+    });
+  }
+
   /* ---- Retrospectiva ---- */
   
   const badCommentModal = qs('#badCommentModal');
   const goodCommentModal = qs('#goodCommentModal');
   const badCommentText = qs('#badCommentText');
   const goodCommentText = qs('#goodCommentText');
-  const downloadRetroBtn = qs('#downloadRetroBtn');
   
   function openBadCommentModal() {
     if (!badCommentModal) return;
@@ -586,11 +594,6 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
   on(qs('#closeGoodCommentModal'), 'click', closeGoodCommentModal);
   on(qs('#skipGoodComment'), 'click', closeGoodCommentModal);
   on(qs('#submitGoodComment'), 'click', submitGoodComment);
-  
-  // Botón de descarga
-  on(downloadRetroBtn, 'click', () => {
-    window.location.href = `/descargar_retrospectiva/${roomCode}`;
-  });
 
   /* ---- Socket ---- */
   if (socket){
@@ -739,6 +742,7 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       const gameOverTitle = document.getElementById('gameOverTitle');
       const gameOverMessage = document.getElementById('gameOverMessage');
       const gameOverExitBtn = document.getElementById('gameOverExitBtn');
+      const downloadRetroGameOverBtn = document.getElementById('downloadRetroGameOverBtn');
 
       if (!gameOverModal) return;
 
@@ -758,8 +762,21 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       boardEl.style.pointerEvents = 'none';
       boardEl.style.opacity = '0.6';
 
+      // Manejador para descargar retrospectiva (remover listeners anteriores)
+      if (downloadRetroGameOverBtn) {
+        const newDownloadBtn = downloadRetroGameOverBtn.cloneNode(true);
+        downloadRetroGameOverBtn.parentNode.replaceChild(newDownloadBtn, downloadRetroGameOverBtn);
+        newDownloadBtn.addEventListener('click', () => {
+          console.log('[DEBUG] Descargando retrospectiva para sala:', roomCode);
+          window.location.href = `/descargar_retrospectiva/${roomCode}`;
+          announce('📥 Descargando retrospectiva...');
+        });
+      }
+
       if (gameOverExitBtn) {
-        gameOverExitBtn.addEventListener('click', () => {
+        const newExitBtn = gameOverExitBtn.cloneNode(true);
+        gameOverExitBtn.parentNode.replaceChild(newExitBtn, gameOverExitBtn);
+        newExitBtn.addEventListener('click', () => {
           window.location.href = '/';
         });
       }
@@ -774,11 +791,6 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
       // Consumir el poder de la lista local solo cuando el servidor confirma
       state.myPowers = state.myPowers.filter(p => p.key !== data.power);
       renderPowers();
-      
-      // Mostrar modal de comentario bueno cuando se usa un poder exitosamente
-      setTimeout(() => {
-        openGoodCommentModal();
-      }, 500);
 
       if (data.power === 'revelar_2x2'){
         const reveals = data.reveals || [];
@@ -866,6 +878,11 @@ const rivalsReadyBtn = document.getElementById('rivalsReadyBtn');
         }
       }
       if (data.power === 'senial') announce('Señuelo colocado en tu tablero.');
+      
+      // Mostrar modal de comentario bueno cuando se usa un poder exitosamente
+      setTimeout(() => {
+        openGoodCommentModal();
+      }, 500);
     });
     socket.on('turno_timer', ({ deadline, duration }) => {
       startTurnTimer(deadline, duration);
